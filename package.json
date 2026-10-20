@@ -1,0 +1,36 @@
+{
+  "name": "veronica-lens-api",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "",
+  "main": "dist/server.js",
+ "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://bialorenzini@github.com/VeronicaLens/veronica-lens-api.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/VeronicaLens/veronica-lens-api/issues"
+  },
+  "homepage": "https://github.com/VeronicaLens/veronica-lens-api#readme",
+  "dependencies": {
+    "express": "^5.3.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^26.6.5",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  }
+}

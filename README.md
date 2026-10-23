@@ -34,3 +34,23 @@ npm start
 ```
 
 Health check: `GET /health`.
+
+## Erros HTTP
+
+As respostas de erro seguem este formato:
+
+```json
+{
+  "error": {
+    "code": "ROUTE_NOT_FOUND",
+    "message": "Route not found"
+  }
+}
+```
+
+- 400 / INVALID_JSON: corpo JSON invalido.
+- 404 / ROUTE_NOT_FOUND: rota inexistente.
+- 413 / PAYLOAD_TOO_LARGE: corpo acima do limite de 1 MB.
+- 500 / INTERNAL_SERVER_ERROR: falha inesperada.
+
+Detalhes internos e stack traces nao sao enviados nas respostas.

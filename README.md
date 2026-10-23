@@ -65,6 +65,23 @@ requisicao.
 Headers, corpos, URLs completas e mensagens de erros externos nao sao
 registrados automaticamente.
 
+## Testes
+
+Execute todos os testes:
+
+    npm test
+
+Execute em modo de observacao:
+
+    npm run test:watch
+
+Os testes atuais verificam configuracao de ambiente e comportamento HTTP.
+Eles nao precisam de servidor iniciado manualmente nem acessam Supabase.
+
+A verificacao de tipos inclui os testes:
+
+    npm run typecheck
+
 ## Supabase
 
 Variaveis obrigatorias:

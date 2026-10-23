@@ -57,10 +57,13 @@ export const errorHandler: ErrorRequestHandler = (
     return;
   }
 
-  console.error('Unhandled request error', {
-    method: req.method,
-    errorType: error instanceof Error ? error.name : typeof error,
-  });
+  req.log.error(
+    {
+        requestId: req.id,
+        errorType: error instanceof Error ? error.name : typeof error,
+    },
+    'Unhandled request error',
+  );
 
   res.status(500).json({
     error: {

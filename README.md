@@ -1,4 +1,3 @@
-
 # Veronica Lens API
 
 API em Express 5 e TypeScript.
@@ -54,3 +53,14 @@ As respostas de erro seguem este formato:
 - 500 / INTERNAL_SERVER_ERROR: falha inesperada.
 
 Detalhes internos e stack traces nao sao enviados nas respostas.
+
+## Logs
+
+A API escreve logs estruturados em JSON na saida padrao.
+
+Cada requisicao recebe um identificador gerado pelo servidor, retornado no
+header X-Request-Id. Esse identificador permite correlacionar os logs da
+requisicao.
+
+Headers, corpos, URLs completas e mensagens de erros externos nao sao
+registrados automaticamente.

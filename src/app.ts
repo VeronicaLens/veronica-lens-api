@@ -2,11 +2,13 @@ import express from 'express';
 
 import { errorHandler } from './shared/http/error-handler.js';
 import { notFoundHandler } from './shared/http/not-found.js';
+import { requestLogger } from './shared/http/request-logger.js';
 
 export function createApp() {
   const app = express();
 
   app.disable('x-powered-by');
+  app.use(requestLogger);
   app.use(express.json({ limit: '1mb' }));
 
   app.get('/health', (_req, res) => {

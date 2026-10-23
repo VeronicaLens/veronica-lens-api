@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-
+import { AppError } from '../../shared/errors/app-error.js';
 import { parseBody } from '../../shared/http/parse-body.js';
 import {
   refreshSessionSchema,
@@ -35,6 +35,22 @@ export class AuthController {
 
     res.status(200).json({
       data: result,
+    });
+  };
+
+  me = (req: Request, res: Response): void => {
+    if (!req.auth) {
+      throw new AppError(
+        401,
+        'AUTH_REQUIRED',
+        'Authentication is required',
+      );
+    }
+
+    res.status(200).json({
+      data: {
+        user: req.auth.user,
+      },
     });
   };
 }

@@ -207,4 +207,41 @@ export class AuthService {
 
     return toPublicSession(result.session);
   }
+
+  async authenticate(accessToken: string): Promise<PublicUser> {
+    const result = await this.model.getUser(accessToken);
+
+    if (result.error) {
+      const invalidTokenCodes = [
+        'bad_jwt',
+        'jwt_expired',
+        'user_not_found',
+        'session_not_found',
+        'session_expired',
+      ];
+
+      if (
+        result.error.status === 401 ||
+        result.error.status === 403 ||
+        (
+          result.error.code !== undefined &&
+          invalidTokenCodes.includes(result.error.code)
+        )
+      ) {
+        throw new AppError(
+          401,
+          'AUTH_TOKEN_INVALID',
+          'Authentication token is invalid or expired',
+        );
+      }
+
+      throwAuthError(result.error);
+    }
+
+    if (!result.user) {
+      return invalidProviderResponse();
+    }
+
+    return toPublicUser(result.user);
+  }
 }

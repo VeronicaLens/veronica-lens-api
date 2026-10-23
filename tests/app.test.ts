@@ -9,6 +9,7 @@ function createApp() {
     signUp: vi.fn<AuthModelPort['signUp']>(),
     signIn: vi.fn<AuthModelPort['signIn']>(),
     refresh: vi.fn<AuthModelPort['refresh']>(),
+    getUser: vi.fn<AuthModelPort['getUser']>(),
   };
 
   return createApplication({ authModel });

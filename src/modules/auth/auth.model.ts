@@ -17,15 +17,21 @@ export interface AuthSessionResult {
   error: AuthError | null;
 }
 
+export interface AuthUserResult {
+  user: User | null;
+  error: AuthError | null;
+}
+
 export interface AuthModelPort {
   signUp(input: SignUpInput): Promise<AuthSessionResult>;
   signIn(input: SignInInput): Promise<AuthSessionResult>;
   refresh(input: RefreshSessionInput): Promise<AuthSessionResult>;
+  getUser(accessToken: string): Promise<AuthUserResult>;
 }
 
 type AuthClient = Pick<
   SupabaseClient['auth'],
-  'signUp' | 'signInWithPassword' | 'refreshSession'
+  'signUp' | 'signInWithPassword' | 'refreshSession' | 'getUser'
 >;
 
 export class SupabaseAuthModel implements AuthModelPort {
@@ -80,6 +86,16 @@ export class SupabaseAuthModel implements AuthModelPort {
     return {
       user: data.user,
       session: data.session,
+      error,
+    };
+  }
+
+  async getUser(accessToken: string): Promise<AuthUserResult> {
+    const { data, error } =
+      await this.createClient().getUser(accessToken);
+
+    return {
+      user: data.user,
       error,
     };
   }

@@ -230,3 +230,35 @@ Falhas de rede ou indisponibilidade nao devem ser tratadas como prova
 de que a sessao foi revogada.
 
 Tokens nunca devem ser registrados em logs.
+
+### GET /api/v1/auth/me
+
+Exige o header:
+
+```http
+Authorization: Bearer <access-token>
+```
+
+A API consulta Supabase Auth para validar o token e obter o usuario.
+Nao confia apenas em claims decodificadas localmente.
+
+Retorna HTTP 200:
+
+```json
+{
+  "data": {
+    "user": {
+      "id": "user-id",
+      "email": "user@example.com",
+      "displayName": "Veronica"
+    }
+  }
+}
+```
+
+- 401 / AUTH_REQUIRED: credencial ausente.
+- 401 / AUTH_TOKEN_INVALID: token invalido ou expirado.
+- 503 / AUTH_UNAVAILABLE: provedor indisponivel.
+
+Indisponibilidade do provedor nao significa que a sessao foi revogada.
+Esta rota nao retorna tokens nem metadados internos.

@@ -179,3 +179,24 @@ Ambas as rotas podem retornar erros de validacao, limite de tentativas
 ou indisponibilidade do provedor. Mensagens internas nao sao expostas.
 
 Os testes HTTP simulam o model; nao verificam Supabase real.
+
+## Limite de tentativas de autenticacao
+
+Cadastro e login compartilham um limite de 20 requisicoes por IP
+a cada 15 minutos. Sucessos e falhas entram na contagem.
+
+Quando o limite e atingido, a API retorna HTTP 429 com o codigo
+AUTH_RATE_LIMITED e o header Retry-After.
+
+O armazenamento atual e em memoria:
+
+- os contadores sao reiniciados junto com o processo;
+- instancias diferentes nao compartilham contadores;
+- usuarios na mesma rede podem compartilhar o limite.
+
+Antes de escalar para varias instancias, configure um armazenamento
+compartilhado, como Redis.
+
+Em hospedagem atras de proxy, configure trust proxy de acordo com
+a topologia documentada pelo provedor. Nao use trust proxy=true
+indiscriminadamente.

@@ -4,7 +4,7 @@ import {
 } from '@supabase/supabase-js';
 import { describe, expect, it, vi } from 'vitest';
 
-import { SupabaseAuthModel } from '../src/modules/auth/auth.model.js';
+import { SupabaseAuthModel } from '../../src/modules/auth/auth.model.js';
 
 function setup() {
   const client = {

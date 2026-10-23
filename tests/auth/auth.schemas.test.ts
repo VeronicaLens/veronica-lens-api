@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   signInSchema,
   signUpSchema,
-} from '../src/modules/auth/auth.schemas.js';
+} from '../../src/modules/auth/auth.schemas.js';
 
 describe('signUpSchema', () => {
   const validInput = {

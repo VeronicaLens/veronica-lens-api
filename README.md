@@ -137,3 +137,17 @@ nao transforma erros do provedor em respostas publicas.
 Os testes dessa camada simulam o SDK e nao validam conectividade real.
 Os endpoints permanecem indisponiveis ate a implementacao do service
 e do controller.
+
+### Service de autenticacao
+
+O AuthService seleciona os campos publicos de usuario e sessao.
+Objetos completos do SDK nao sao retornados ao aplicativo.
+
+O cadastro pode retornar sessao imediata ou exigir confirmacao de email.
+A resposta nao deve ser interpretada como prova de que um email ainda
+nao estava cadastrado.
+
+Erros conhecidos sao convertidos em codigos publicos. Mensagens internas
+do Supabase nao sao expostas.
+
+Os endpoints ainda nao estao conectados.

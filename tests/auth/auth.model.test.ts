@@ -11,6 +11,7 @@ function setup() {
     signUp: vi.fn<SupabaseClient['auth']['signUp']>(),
     signInWithPassword:
       vi.fn<SupabaseClient['auth']['signInWithPassword']>(),
+    refreshSession: vi.fn<SupabaseClient['auth']['refreshSession']>(),
   };
 
   const createClient = vi.fn(() => client);

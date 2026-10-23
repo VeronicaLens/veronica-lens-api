@@ -1,7 +1,11 @@
 import type { Request, Response } from 'express';
 
 import { parseBody } from '../../shared/http/parse-body.js';
-import { signInSchema, signUpSchema } from './auth.schemas.js';
+import {
+  refreshSessionSchema,
+  signInSchema,
+  signUpSchema,
+} from './auth.schemas.js';
 import type { AuthService } from './auth.service.js';
 
 export class AuthController {
@@ -19,6 +23,15 @@ export class AuthController {
   signIn = async (req: Request, res: Response): Promise<void> => {
     const input = parseBody(signInSchema, req.body);
     const result = await this.service.signIn(input);
+
+    res.status(200).json({
+      data: result,
+    });
+  };
+
+  refresh = async (req: Request, res: Response): Promise<void> => {
+    const input = parseBody(refreshSessionSchema, req.body);
+    const result = await this.service.refresh(input);
 
     res.status(200).json({
       data: result,

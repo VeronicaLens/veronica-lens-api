@@ -200,3 +200,33 @@ compartilhado, como Redis.
 Em hospedagem atras de proxy, configure trust proxy de acordo com
 a topologia documentada pelo provedor. Nao use trust proxy=true
 indiscriminadamente.
+
+### POST /api/v1/auth/refresh
+
+Recebe:
+
+```json
+{
+  "refreshToken": "refresh-token-da-sessao"
+}
+```
+
+Retorna HTTP 200 com o mesmo contrato publico da sessao de login.
+
+O aplicativo deve substituir o accessToken e o refreshToken armazenados
+pelos valores retornados. Nao deve executar renovacoes concorrentes da
+mesma sessao: use uma unica renovacao em andamento e compartilhe o
+resultado entre as requisicoes que aguardam.
+
+- 400: entrada invalida.
+- 401 / AUTH_SESSION_INVALID: sessao invalida ou expirada.
+- 429: limite de tentativas.
+- 503: provedor temporariamente indisponivel.
+
+Cadastro, login e refresh compartilham o limite de autenticacao.
+
+Em caso de 401 de sessao invalida, o app deve encerrar a sessao local.
+Falhas de rede ou indisponibilidade nao devem ser tratadas como prova
+de que a sessao foi revogada.
+
+Tokens nunca devem ser registrados em logs.

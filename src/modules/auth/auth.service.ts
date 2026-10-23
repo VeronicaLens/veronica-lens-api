@@ -7,7 +7,11 @@ import type {
 import { AppError } from '../../shared/errors/app-error.js';
 import { logger } from '../../shared/logging/logger.js';
 import type { AuthModelPort } from './auth.model.js';
-import type { SignInInput, SignUpInput } from './auth.schemas.js';
+import type {
+  RefreshSessionInput,
+  SignInInput,
+  SignUpInput,
+} from './auth.schemas.js';
 import type {
   PublicSession,
   PublicUser,
@@ -103,10 +107,14 @@ function throwAuthError(error: AuthError): never {
 
   switch (error.code) {
     case 'invalid_credentials':
+    case 'refresh_token_not_found':
+    case 'refresh_token_already_used':
+    case 'session_not_found':
+    case 'session_expired':
       throw new AppError(
         401,
-        'AUTH_INVALID_CREDENTIALS',
-        'Invalid authentication credentials',
+        'AUTH_SESSION_INVALID',
+        'Authentication session is invalid or expired',
       );
 
     case 'email_not_confirmed':
@@ -172,6 +180,22 @@ export class AuthService {
 
   async signIn(input: SignInInput): Promise<PublicSession> {
     const result = await this.model.signIn(input);
+
+    if (result.error) {
+      throwAuthError(result.error);
+    }
+
+    if (!result.session) {
+      return invalidProviderResponse();
+    }
+
+    return toPublicSession(result.session);
+  }
+
+  async refresh(
+    input: RefreshSessionInput,
+  ): Promise<PublicSession> {
+    const result = await this.model.refresh(input);
 
     if (result.error) {
       throwAuthError(result.error);

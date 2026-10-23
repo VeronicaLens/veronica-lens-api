@@ -5,7 +5,11 @@ import type {
   User,
 } from '@supabase/supabase-js';
 
-import type { SignInInput, SignUpInput } from './auth.schemas.js';
+import type {
+  RefreshSessionInput,
+  SignInInput,
+  SignUpInput,
+} from './auth.schemas.js';
 
 export interface AuthSessionResult {
   user: User | null;
@@ -16,11 +20,12 @@ export interface AuthSessionResult {
 export interface AuthModelPort {
   signUp(input: SignUpInput): Promise<AuthSessionResult>;
   signIn(input: SignInInput): Promise<AuthSessionResult>;
+  refresh(input: RefreshSessionInput): Promise<AuthSessionResult>;
 }
 
 type AuthClient = Pick<
   SupabaseClient['auth'],
-  'signUp' | 'signInWithPassword'
+  'signUp' | 'signInWithPassword' | 'refreshSession'
 >;
 
 export class SupabaseAuthModel implements AuthModelPort {
@@ -57,6 +62,20 @@ export class SupabaseAuthModel implements AuthModelPort {
         email: input.email,
         password: input.password,
       });
+
+    return {
+      user: data.user,
+      session: data.session,
+      error,
+    };
+  }
+
+  async refresh(
+    input: RefreshSessionInput,
+  ): Promise<AuthSessionResult> {
+    const { data, error } = await this.createClient().refreshSession({
+      refresh_token: input.refreshToken,
+    });
 
     return {
       user: data.user,

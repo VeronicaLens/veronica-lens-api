@@ -125,3 +125,15 @@ Senhas nao sao aparadas nem normalizadas.
 
 Entradas invalidas retornarao HTTP 400 com o codigo VALIDATION_ERROR.
 Campos nao declarados nos schemas sao descartados.
+
+### Model de autenticacao
+
+O SupabaseAuthModel implementa cadastro e login usando um cliente de
+autenticacao criado por operacao.
+
+O model nao usa credenciais administrativas, nao define status HTTP e
+nao transforma erros do provedor em respostas publicas.
+
+Os testes dessa camada simulam o SDK e nao validam conectividade real.
+Os endpoints permanecem indisponiveis ate a implementacao do service
+e do controller.

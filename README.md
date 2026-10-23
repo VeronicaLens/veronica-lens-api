@@ -64,3 +64,22 @@ requisicao.
 
 Headers, corpos, URLs completas e mensagens de erros externos nao sao
 registrados automaticamente.
+
+## Supabase
+
+Variaveis obrigatorias:
+
+- SUPABASE_URL: URL do projeto.
+- SUPABASE_PUBLISHABLE_KEY: chave publica do projeto.
+
+Variavel opcional:
+
+- SUPABASE_SECRET_KEY: chave exclusiva de operacoes administrativas.
+
+Os clientes de usuario usam o JWT da requisicao e dependem de RLS no banco.
+Clientes administrativos nao devem ser usados em operacoes comuns de usuario.
+
+A criacao de um cliente nao verifica conectividade nem valida a identidade
+do usuario. Essas verificacoes sao feitas pelos fluxos que utilizam o cliente.
+
+Nunca versione credenciais ou registre tokens nos logs.

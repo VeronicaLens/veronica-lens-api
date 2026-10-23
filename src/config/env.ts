@@ -11,9 +11,17 @@ const envSchema = z.object({
     .default('3000')
     .transform(Number)
     .pipe(z.number().int().min(1).max(65535)),
+  SUPABASE_URL: z.url().refine(
+    (value) => ['http:', 'https:'].includes(new URL(value).protocol),
+    'Deve usar HTTP ou HTTPS.',
+  ),
+  SUPABASE_PUBLISHABLE_KEY: z.string().trim().min(1),
+  SUPABASE_SECRET_KEY: z.string().trim().min(1).optional(),
 });
 
-export function loadEnv(source: NodeJS.ProcessEnv = process.env) {
+export type Env = z.infer<typeof envSchema>;
+
+export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
   const result = envSchema.safeParse(source);
 
   if (!result.success) {

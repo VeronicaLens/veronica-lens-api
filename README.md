@@ -100,3 +100,28 @@ A criacao de um cliente nao verifica conectividade nem valida a identidade
 do usuario. Essas verificacoes sao feitas pelos fluxos que utilizam o cliente.
 
 Nunca versione credenciais ou registre tokens nos logs.
+
+## Autenticacao em implementacao
+
+Rotas planejadas, ainda nao disponiveis:
+
+- POST /api/v1/auth/sign-up
+- POST /api/v1/auth/sign-in
+
+Corpo de cadastro:
+
+```json
+{
+  "email": "user@example.com",
+  "password": "example-password",
+  "displayName": "Veronica"
+}
+```
+
+displayName e opcional. O cadastro aceita senhas de 8 a 72 caracteres.
+
+O login recebe email e password. Aceita senha nao vazia de ate 72 caracteres.
+Senhas nao sao aparadas nem normalizadas.
+
+Entradas invalidas retornarao HTTP 400 com o codigo VALIDATION_ERROR.
+Campos nao declarados nos schemas sao descartados.

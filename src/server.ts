@@ -1,9 +1,16 @@
 import { createApp } from './app.js';
 import { loadEnv } from './config/env.js';
+import { createAuthClient } from './config/supabase.js';
+import { SupabaseAuthModel } from './modules/auth/auth.model.js';
 import { logger } from './shared/logging/logger.js';
 
 const env = loadEnv();
-const app = createApp();
+
+const authModel = new SupabaseAuthModel(
+  () => createAuthClient(env).auth,
+);
+
+const app = createApp({ authModel });
 
 const server = app.listen(env.PORT, '0.0.0.0', () => {
   logger.info(

@@ -1,10 +1,16 @@
 import express from 'express';
 
+import type { AuthModelPort } from './modules/auth/auth.model.js';
+import { createAuthRouter } from './modules/auth/auth.routes.js';
 import { errorHandler } from './shared/http/error-handler.js';
 import { notFoundHandler } from './shared/http/not-found.js';
 import { requestLogger } from './shared/http/request-logger.js';
 
-export function createApp() {
+interface AppOptions {
+  authModel: AuthModelPort;
+}
+
+export function createApp(options: AppOptions) {
   const app = express();
 
   app.disable('x-powered-by');
@@ -18,6 +24,8 @@ export function createApp() {
       timestamp: new Date().toISOString(),
     });
   });
+
+  app.use('/api/v1/auth', createAuthRouter(options.authModel));
 
   app.use(notFoundHandler);
   app.use(errorHandler);

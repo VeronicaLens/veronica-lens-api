@@ -151,3 +151,31 @@ Erros conhecidos sao convertidos em codigos publicos. Mensagens internas
 do Supabase nao sao expostas.
 
 Os endpoints ainda nao estao conectados.
+
+## Endpoints de autenticacao
+
+### POST /api/v1/auth/sign-up
+
+Recebe email, password e displayName opcional.
+
+- 201: cadastro com sessao imediata.
+- 202: solicitacao aceita, sem sessao; confirmacao necessaria.
+
+A resposta usa o envelope data, contendo user, session e
+confirmationRequired. Ela nao comprova que o email nao estava cadastrado.
+
+### POST /api/v1/auth/sign-in
+
+Recebe email e password.
+
+- 200: sessao autenticada.
+- 401: credenciais invalidas.
+- 403: email ainda nao confirmado.
+
+A resposta usa o envelope data com user, accessToken, refreshToken,
+tokenType e expiresAt.
+
+Ambas as rotas podem retornar erros de validacao, limite de tentativas
+ou indisponibilidade do provedor. Mensagens internas nao sao expostas.
+
+Os testes HTTP simulam o model; nao verificam Supabase real.

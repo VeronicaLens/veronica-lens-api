@@ -1,7 +1,17 @@
 import request from 'supertest';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
-import { createApp } from '../src/app.js';
+import { createApp as createApplication } from '../src/app.js';
+import type { AuthModelPort } from '../src/modules/auth/auth.model.js';
+
+function createApp() {
+  const authModel = {
+    signUp: vi.fn<AuthModelPort['signUp']>(),
+    signIn: vi.fn<AuthModelPort['signIn']>(),
+  };
+
+  return createApplication({ authModel });
+}
 
 const uuidPattern =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;

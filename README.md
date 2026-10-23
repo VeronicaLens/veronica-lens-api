@@ -1,6 +1,20 @@
 # Veronica Lens API
 
-API em Express 5 e TypeScript.
+API do Veronica Lens em Express 5 e TypeScript, com autenticacao via Supabase,
+logs estruturados e documentacao HTTP interativa.
+
+O projeto esta sendo reconstruido incrementalmente. Atualmente implementa
+cadastro, login, renovacao de sessao e consulta do usuario autenticado.
+Logout, recuperacao de senha e os demais dominios ainda nao estao implementados.
+
+## Requisitos
+
+- Node.js compativel com os campos `engines` das dependencias instaladas.
+  Para desenvolvimento e CI, prefira Node.js 24 LTS.
+- npm.
+- Projeto Supabase para executar os fluxos reais de autenticacao.
+
+Os testes atuais nao exigem conta Supabase, credenciais reais ou banco local.
 
 ## Configuracao local
 
@@ -10,33 +24,131 @@ Copy-Item .env.example .env
 npm run dev
 ```
 
-Copie o exemplo apenas se o arquivo de ambiente local ainda nao existir.
-Nunca versione arquivos locais com credenciais.
+Copie o exemplo somente se o arquivo `.env` ainda nao existir. Preencha os valores
+reais antes de iniciar o servidor. Nunca versione o arquivo local ou credenciais.
 
-## Variaveis de ambiente
+### Variaveis de ambiente
 
+| Variavel | Obrigatoria | Padrao | Descricao |
+| --- | --- | --- | --- |
+| `NODE_ENV` | Nao | `development` | `development`, `test` ou `production` |
+| `PORT` | Nao | `3000` | Inteiro de 1 a 65535 |
+| `SUPABASE_URL` | Sim | Nenhum | URL HTTP ou HTTPS do projeto Supabase |
+| `SUPABASE_PUBLISHABLE_KEY` | Sim | Nenhum | Chave publica usada pelos clientes de autenticacao e usuario |
+| `SUPABASE_SECRET_KEY` | Nao | Nenhum | Chave exclusiva de futuras operacoes administrativas |
 
-| Variavel | Padrao      | Valores aceitos                 |
-| ---------- | ------------- | --------------------------------- |
-| NODE_ENV | development | development, test ou production |
-| PORT     | 3000        | Numero inteiro entre 1 e 65535  |
+A configuracao e validada antes de abrir a porta. Erros indicam os campos
+invalidos sem imprimir seus valores. A criacao do cliente nao verifica
+conectividade com Supabase.
 
-A API interrompe a inicializacao quando uma configuracao e invalida.
+Os fluxos atuais de autenticacao nao precisam da chave administrativa.
 Em producao, configure as variaveis no servico de hospedagem.
+GitHub Actions secrets so sao necessarios quando o workflow acessa recursos
+que exigem essas credenciais; os testes atuais nao precisam delas.
 
-## Validacao e execucao
+## Scripts
+
+| Comando | Funcao |
+| --- | --- |
+| `npm run dev` | Executa a API com recarga automatica |
+| `npm run typecheck` | Verifica tipos da aplicacao e dos testes |
+| `npm test` | Executa todos os testes uma vez |
+| `npm run test:watch` | Executa os testes em modo de observacao |
+| `npm run build` | Compila a aplicacao para `dist/` |
+| `npm start` | Executa a aplicacao compilada |
+
+Para validar e executar a versao compilada:
 
 ```powershell
 npm run typecheck
+npm test
 npm run build
 npm start
 ```
 
-Health check: `GET /health`.
+## Documentacao HTTP
 
-## Erros HTTP
+Com a API rodando na porta padrao:
 
-As respostas de erro seguem este formato:
+- [Swagger UI](http://localhost:3000/docs/): interface interativa.
+- [OpenAPI JSON](http://localhost:3000/openapi.json): contrato importavel em
+  ferramentas como Postman.
+- [Health check](http://localhost:3000/health): verifica o processo da API,
+  sem consultar Supabase.
+
+Ajuste host e porta de acordo com o ambiente. Na API hospedada, os caminhos
+`/docs/` e `/openapi.json` permanecem os mesmos.
+
+O contrato e mantido em [src/docs/openapi.ts](./src/docs/openapi.ts).
+Ao alterar um endpoint, atualize o contrato e os testes no mesmo commit.
+Swagger UI apresenta a especificacao; nao a gera automaticamente a partir
+dos controllers.
+
+Para testar `/api/v1/auth/me`, use **Authorize** e informe somente o access token,
+sem o prefixo `Bearer`. A autorizacao nao e persistida no armazenamento do
+navegador pela configuracao da interface.
+
+As operacoes executadas no Swagger sao reais: podem criar contas e enviar
+emails. Use um projeto de desenvolvimento e nao compartilhe tokens,
+capturas de tela ou respostas contendo sessoes.
+
+## Arquitetura
+
+Monolito modular com separacao por funcionalidade:
+
+```text
+src/
+  app.ts                 # Composicao do Express, sem abrir porta
+  server.ts              # Ambiente, dependencias reais e inicializacao
+  config/                # Validacao de ambiente e clientes Supabase
+  docs/                  # Contrato OpenAPI e Swagger UI
+  modules/
+    auth/                # Schemas, rotas, controller, service e model
+  shared/
+    auth/                # Middleware e contexto autenticado
+    errors/              # Erros da aplicacao
+    http/                # Parser, logs HTTP e tratamento de erros
+    logging/             # Logger compartilhado
+tests/
+  auth/                  # Testes do modulo de autenticacao
+```
+
+Fluxo principal:
+
+```text
+Route -> Controller/Schema -> Service -> Model -> Supabase
+```
+
+- Controllers traduzem entrada e saida HTTP.
+- Services aplicam regras e selecionam os campos publicos.
+- Models encapsulam chamadas ao provedor.
+- A aplicacao recebe o model por injecao de dependencia.
+- Cada operacao de autenticacao cria um cliente sem persistir sessao no servidor.
+- Clientes de usuario usam o JWT da requisicao; consultas de dados dependem
+  tambem de grants e RLS no Supabase.
+- Clientes administrativos podem ignorar RLS e nao devem substituir o acesso
+  contextualizado do usuario.
+
+## Autenticacao e sessoes
+
+O cadastro pode retornar sessao imediata ou exigir confirmacao de email,
+conforme a configuracao do Supabase. A resposta nao comprova que o email
+estava disponivel antes da solicitacao.
+
+A rota protegida valida o access token consultando Supabase Auth; decodificar
+um JWT localmente nao e suficiente para estabelecer a identidade.
+
+Na renovacao, o aplicativo deve substituir ambos os tokens pelos valores
+retornados e evitar renovacoes concorrentes da mesma sessao.
+Uma falha de rede ou indisponibilidade do provedor nao comprova revogacao.
+
+Os contratos completos de entrada, resposta e status HTTP estao no Swagger.
+Nao envie objetos completos do SDK ao aplicativo nem use metadados editaveis
+pelo usuario para atribuir privilegios administrativos.
+
+## Erros e logs
+
+Os erros usam o envelope:
 
 ```json
 {
@@ -47,218 +159,58 @@ As respostas de erro seguem este formato:
 }
 ```
 
-- 400 / INVALID_JSON: corpo JSON invalido.
-- 404 / ROUTE_NOT_FOUND: rota inexistente.
-- 413 / PAYLOAD_TOO_LARGE: corpo acima do limite de 1 MB.
-- 500 / INTERNAL_SERVER_ERROR: falha inesperada.
+O middleware central trata erros esperados, JSON invalido, limite do corpo
+de 1 MB e falhas inesperadas. Stack traces e mensagens internas do provedor
+nao sao retornados ao cliente.
 
-Detalhes internos e stack traces nao sao enviados nas respostas.
-
-## Logs
-
-A API escreve logs estruturados em JSON na saida padrao.
-
-Cada requisicao recebe um identificador gerado pelo servidor, retornado no
-header X-Request-Id. Esse identificador permite correlacionar os logs da
-requisicao.
-
+Logs sao escritos em JSON com Pino. Cada requisicao recebe um identificador
+gerado pelo servidor, retornado no header `X-Request-Id`.
 Headers, corpos, URLs completas e mensagens de erros externos nao sao
 registrados automaticamente.
 
+Nunca registre tokens, senhas, chaves ou o contexto autenticado completo.
+
+## Limite de tentativas
+
+Cadastro, login e refresh compartilham 20 requisicoes por IP a cada 15 minutos,
+contando sucessos e falhas. O bloqueio retorna HTTP 429 e `Retry-After`.
+A consulta do usuario autenticado nao usa esse limitador.
+
+O contador atual fica em memoria: reinicia com o processo e nao e compartilhado
+entre instancias. Usuarios na mesma rede podem compartilhar o limite.
+Antes de escalar, use um armazenamento compartilhado.
+
+O parser JSON roda antes do limitador das rotas: corpos malformados ou acima
+do limite sao rejeitados antes dessa contagem.
+
+Antes do deploy, configure `trust proxy` conforme a topologia da hospedagem.
+Nao habilite `trust proxy=true` indiscriminadamente. Essa protecao nao substitui
+limites na borda nem os controles do Supabase.
+
 ## Testes
 
-Execute todos os testes:
+Vitest executa os testes; Supertest exercita a aplicacao HTTP sem iniciar
+manualmente o servidor.
 
-    npm test
-
-Execute em modo de observacao:
-
-    npm run test:watch
-
-Os testes atuais verificam configuracao de ambiente e comportamento HTTP.
-Eles nao precisam de servidor iniciado manualmente nem acessam Supabase.
-
-A verificacao de tipos inclui os testes:
-
-    npm run typecheck
-
-## Supabase
-
-Variaveis obrigatorias:
-
-- SUPABASE_URL: URL do projeto.
-- SUPABASE_PUBLISHABLE_KEY: chave publica do projeto.
-
-Variavel opcional:
-
-- SUPABASE_SECRET_KEY: chave exclusiva de operacoes administrativas.
-
-Os clientes de usuario usam o JWT da requisicao e dependem de RLS no banco.
-Clientes administrativos nao devem ser usados em operacoes comuns de usuario.
-
-A criacao de um cliente nao verifica conectividade nem valida a identidade
-do usuario. Essas verificacoes sao feitas pelos fluxos que utilizam o cliente.
-
-Nunca versione credenciais ou registre tokens nos logs.
-
-## Autenticacao em implementacao
-
-Rotas planejadas, ainda nao disponiveis:
-
-- POST /api/v1/auth/sign-up
-- POST /api/v1/auth/sign-in
-
-Corpo de cadastro:
-
-```json
-{
-  "email": "user@example.com",
-  "password": "example-password",
-  "displayName": "Veronica"
-}
+```powershell
+npm test -- tests/auth
+npm test -- tests/docs.test.ts
 ```
 
-displayName e opcional. O cadastro aceita senhas de 8 a 72 caracteres.
+A suite cobre configuracao, schemas, model, service, rotas, renovacao,
+autenticacao bearer, limite de tentativas e entrega da documentacao.
 
-O login recebe email e password. Aceita senha nao vazia de ate 72 caracteres.
-Senhas nao sao aparadas nem normalizadas.
+Os testes usam dependencias simuladas. Nao comprovam entrega de emails,
+rotacao real de tokens, conectividade, grants ou RLS.
+Os testes da documentacao tambem nao substituem validacao de todas as respostas
+reais contra o contrato OpenAPI.
 
-Entradas invalidas retornarao HTTP 400 com o codigo VALIDATION_ERROR.
-Campos nao declarados nos schemas sao descartados.
+## Antes de disponibilizar publicamente
 
-### Model de autenticacao
-
-O SupabaseAuthModel implementa cadastro e login usando um cliente de
-autenticacao criado por operacao.
-
-O model nao usa credenciais administrativas, nao define status HTTP e
-nao transforma erros do provedor em respostas publicas.
-
-Os testes dessa camada simulam o SDK e nao validam conectividade real.
-Os endpoints permanecem indisponiveis ate a implementacao do service
-e do controller.
-
-### Service de autenticacao
-
-O AuthService seleciona os campos publicos de usuario e sessao.
-Objetos completos do SDK nao sao retornados ao aplicativo.
-
-O cadastro pode retornar sessao imediata ou exigir confirmacao de email.
-A resposta nao deve ser interpretada como prova de que um email ainda
-nao estava cadastrado.
-
-Erros conhecidos sao convertidos em codigos publicos. Mensagens internas
-do Supabase nao sao expostas.
-
-Os endpoints ainda nao estao conectados.
-
-## Endpoints de autenticacao
-
-### POST /api/v1/auth/sign-up
-
-Recebe email, password e displayName opcional.
-
-- 201: cadastro com sessao imediata.
-- 202: solicitacao aceita, sem sessao; confirmacao necessaria.
-
-A resposta usa o envelope data, contendo user, session e
-confirmationRequired. Ela nao comprova que o email nao estava cadastrado.
-
-### POST /api/v1/auth/sign-in
-
-Recebe email e password.
-
-- 200: sessao autenticada.
-- 401: credenciais invalidas.
-- 403: email ainda nao confirmado.
-
-A resposta usa o envelope data com user, accessToken, refreshToken,
-tokenType e expiresAt.
-
-Ambas as rotas podem retornar erros de validacao, limite de tentativas
-ou indisponibilidade do provedor. Mensagens internas nao sao expostas.
-
-Os testes HTTP simulam o model; nao verificam Supabase real.
-
-## Limite de tentativas de autenticacao
-
-Cadastro e login compartilham um limite de 20 requisicoes por IP
-a cada 15 minutos. Sucessos e falhas entram na contagem.
-
-Quando o limite e atingido, a API retorna HTTP 429 com o codigo
-AUTH_RATE_LIMITED e o header Retry-After.
-
-O armazenamento atual e em memoria:
-
-- os contadores sao reiniciados junto com o processo;
-- instancias diferentes nao compartilham contadores;
-- usuarios na mesma rede podem compartilhar o limite.
-
-Antes de escalar para varias instancias, configure um armazenamento
-compartilhado, como Redis.
-
-Em hospedagem atras de proxy, configure trust proxy de acordo com
-a topologia documentada pelo provedor. Nao use trust proxy=true
-indiscriminadamente.
-
-### POST /api/v1/auth/refresh
-
-Recebe:
-
-```json
-{
-  "refreshToken": "refresh-token-da-sessao"
-}
-```
-
-Retorna HTTP 200 com o mesmo contrato publico da sessao de login.
-
-O aplicativo deve substituir o accessToken e o refreshToken armazenados
-pelos valores retornados. Nao deve executar renovacoes concorrentes da
-mesma sessao: use uma unica renovacao em andamento e compartilhe o
-resultado entre as requisicoes que aguardam.
-
-- 400: entrada invalida.
-- 401 / AUTH_SESSION_INVALID: sessao invalida ou expirada.
-- 429: limite de tentativas.
-- 503: provedor temporariamente indisponivel.
-
-Cadastro, login e refresh compartilham o limite de autenticacao.
-
-Em caso de 401 de sessao invalida, o app deve encerrar a sessao local.
-Falhas de rede ou indisponibilidade nao devem ser tratadas como prova
-de que a sessao foi revogada.
-
-Tokens nunca devem ser registrados em logs.
-
-### GET /api/v1/auth/me
-
-Exige o header:
-
-```http
-Authorization: Bearer <access-token>
-```
-
-A API consulta Supabase Auth para validar o token e obter o usuario.
-Nao confia apenas em claims decodificadas localmente.
-
-Retorna HTTP 200:
-
-```json
-{
-  "data": {
-    "user": {
-      "id": "user-id",
-      "email": "user@example.com",
-      "displayName": "Veronica"
-    }
-  }
-}
-```
-
-- 401 / AUTH_REQUIRED: credencial ausente.
-- 401 / AUTH_TOKEN_INVALID: token invalido ou expirado.
-- 503 / AUTH_UNAVAILABLE: provedor indisponivel.
-
-Indisponibilidade do provedor nao significa que a sessao foi revogada.
-Esta rota nao retorna tokens nem metadados internos.
+- Usar HTTPS.
+- Configurar confirmacao de email e URLs permitidas no Supabase.
+- Revisar a confianca em proxies e os limites de trafego.
+- Manter chaves administrativas somente no backend.
+- Verificar grants e RLS antes de adicionar persistencia de dados.
+- Validar os fluxos reais em ambiente separado de producao.
+- Decidir se a documentacao interativa deve ser publica ou protegida.

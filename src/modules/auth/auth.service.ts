@@ -107,6 +107,12 @@ function throwAuthError(error: AuthError): never {
 
   switch (error.code) {
     case 'invalid_credentials':
+      throw new AppError(
+        401,
+        'AUTH_INVALID_CREDENTIALS',
+        'Invalid authentication credentials',
+      );
+
     case 'refresh_token_not_found':
     case 'refresh_token_already_used':
     case 'session_not_found':

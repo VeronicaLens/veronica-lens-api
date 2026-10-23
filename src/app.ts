@@ -5,6 +5,7 @@ import { createAuthRouter } from './modules/auth/auth.routes.js';
 import { errorHandler } from './shared/http/error-handler.js';
 import { notFoundHandler } from './shared/http/not-found.js';
 import { requestLogger } from './shared/http/request-logger.js';
+import { createDocsRouter } from './docs/docs.routes.js';
 
 interface AppOptions {
   authModel: AuthModelPort;
@@ -26,6 +27,7 @@ export function createApp(options: AppOptions) {
   });
 
   app.use('/api/v1/auth', createAuthRouter(options.authModel));
+  app.use(createDocsRouter());
 
   app.use(notFoundHandler);
   app.use(errorHandler);

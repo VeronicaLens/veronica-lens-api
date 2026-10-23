@@ -153,7 +153,7 @@ describe('Authenticated user', () => {
 
     model.getUser.mockResolvedValue({
       user: null,
-      error: new AuthApiError('Internal provider details', 503),
+      error: new AuthApiError('Internal provider details', 503, undefined),
     });
 
     const response = await request(app)

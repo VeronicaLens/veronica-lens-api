@@ -11,10 +11,10 @@ const envSchema = z.object({
     .default('3000')
     .transform(Number)
     .pipe(z.number().int().min(1).max(65535)),
-  SUPABASE_URL: z.url().refine(
+  SUPABASE_URL: z.url().pipe(z.string().refine(
     (value) => ['http:', 'https:'].includes(new URL(value).protocol),
     'Deve usar HTTP ou HTTPS.',
-  ),
+  )),
   SUPABASE_PUBLISHABLE_KEY: z.string().trim().min(1),
   SUPABASE_SECRET_KEY: z.string().trim().min(1).optional(),
 });

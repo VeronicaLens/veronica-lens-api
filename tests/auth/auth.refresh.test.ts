@@ -176,7 +176,7 @@ describe('Session refresh', () => {
     model.refresh.mockResolvedValue({
       user: null,
       session: null,
-      error: new AuthApiError('Internal provider details', 503),
+      error: new AuthApiError('Internal provider details', 503, undefined),
     });
 
     const response = await request(app)

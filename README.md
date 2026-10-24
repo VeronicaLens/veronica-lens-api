@@ -116,6 +116,7 @@ src/
   docs/                  # Contrato OpenAPI e Swagger UI
   modules/
     account/             # Exclusao da propria conta (chave secreta)
+    astronomy/           # Calculos de posicao e cliente do JPL Horizons
     auth/                # Schemas, rotas, controller, service e model
     catalog/             # Catalogo estatico de objetos celestes
     profile/             # Perfil do usuario autenticado
@@ -127,6 +128,8 @@ src/
 tests/
   helpers/               # Mocks tipados compartilhados dos models
   account/               # Testes do modulo de conta
+  astronomy/             # Calculos, cliente do Horizons e cache
+  fixtures/              # Respostas reais de provedores externos
   auth/                  # Testes do modulo de autenticacao
   catalog/               # Testes do catalogo e da integridade dos dados
   profile/               # Testes do modulo de perfil
@@ -301,6 +304,43 @@ O catalogo e estatico, em `src/modules/catalog/catalog.data.ts`, com 24 objetos:
 Alteracoes no catalogo mudam a API publica; os testes validam IDs unicos e
 faixas de coordenadas. O model devolve copias, entao nenhuma requisicao altera
 os dados em memoria.
+
+## Astronomia e JPL Horizons
+
+O modulo `astronomy` calcula posicoes no ceu e ainda nao tem rotas proprias;
+sera usado pelo guia do ceu, eventos e planejamento.
+
+- **Estrelas e constelacoes** (coordenadas fixas J2000): conversao local de
+  equatorial para horizontal (`astro-core.ts`), sem chamada externa. Sem
+  precessao, nutacao e refracao, o erro fica em fracoes de grau, suficiente
+  para apontar o celular.
+- **Lua e planetas**: posicao aparente consultada no
+  [JPL Horizons](https://ssd.jpl.nasa.gov/horizons/) (`horizons.client.ts`),
+  servico publico da NASA/JPL que nao exige chave.
+
+Protecoes do cliente do Horizons:
+
+- O ID do objeto precisa ser numerico (ate 9 digitos), pois e interpolado no
+  parametro `COMMAND` da consulta.
+- Timeout de 8 s por requisicao; ate 3 tentativas para status 429, 502, 503 e
+  504, com espera crescente (300 ms, 600 ms).
+- No maximo 3 requisicoes simultaneas por processo, compartilhadas entre
+  todos os usuarios; o Horizons responde rajadas com 503.
+- Erros de requisicao chegam com HTTP 200 e um campo `error`; sao tratados
+  como `REJECTED`, e nao como resposta valida.
+- Falhas viram `AstronomyProviderError` (`UNAVAILABLE`, `INVALID_RESPONSE` ou
+  `REJECTED`); o conteudo da resposta externa nao e repassado.
+
+`CachedEphemerisProvider` guarda posicoes em memoria por 10 minutos (ate 1000
+entradas). Pedidos sao arredondados para o minuto e para cerca de 100 m, entao
+usuarios proximos compartilham o resultado; em um minuto o ceu gira 0,25 grau.
+Pedidos identicos simultaneos geram uma unica chamada, e falhas nao sao
+guardadas. O cache e por processo e reinicia com ele.
+
+`tests/fixtures/horizons-moon-observer.json` e uma resposta real do Horizons
+(Lua vista de Campinas em 2026-06-01T00:00Z). Os testes usam essa resposta para
+validar o parser e para conferir que a conversao local fica a menos de 0,05
+grau do azimute e da elevacao calculados pelo JPL. Os testes nao acessam a rede.
 
 ## Exclusao de conta
 

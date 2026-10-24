@@ -38,12 +38,6 @@ export function createUserClient(env: Env, accessToken: string) {
 }
 
 export function createAdminClient(env: Env) {
-  if (!env.SUPABASE_SECRET_KEY) {
-    throw new Error(
-      'SUPABASE_SECRET_KEY is required for administrative operations',
-    );
-  }
-
   return createClient(
     env.SUPABASE_URL,
     env.SUPABASE_SECRET_KEY,

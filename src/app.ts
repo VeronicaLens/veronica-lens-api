@@ -1,5 +1,7 @@
 import express from 'express';
 
+import type { AccountModelPort } from './modules/account/account.model.js';
+import { createAccountRouter } from './modules/account/account.routes.js';
 import type { AuthModelPort } from './modules/auth/auth.model.js';
 import { createAuthRouter } from './modules/auth/auth.routes.js';
 import { AuthService } from './modules/auth/auth.service.js';
@@ -20,6 +22,7 @@ interface AppOptions {
   authModel: AuthModelPort;
   profileModel: ProfileModelPort;
   avatarStorage: AvatarStoragePort;
+  accountModel: AccountModelPort;
   corsOrigins?: readonly string[];
   httpsOnly?: boolean;
 }
@@ -52,6 +55,10 @@ export function createApp(options: AppOptions) {
       options.avatarStorage,
       authenticate,
     ),
+  );
+  app.use(
+    '/api/v1/account',
+    createAccountRouter(options.accountModel, authenticate),
   );
   app.use(createDocsRouter());
 

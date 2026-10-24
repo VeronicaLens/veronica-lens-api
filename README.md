@@ -6,9 +6,10 @@ logs estruturados e documentacao HTTP interativa.
 O projeto esta sendo reconstruido incrementalmente. Atualmente implementa
 cadastro, login, renovacao de sessao, consulta do usuario autenticado, logout
 da sessao atual, solicitacao de recuperacao de senha por email, atualizacao
-da senha com a sessao do proprio usuario, consulta/edicao do proprio perfil e
-upload/remocao de avatar.
-Exclusao de conta e os demais dominios ainda nao estao implementados.
+da senha com a sessao do proprio usuario, consulta/edicao do proprio perfil,
+upload/remocao de avatar e exclusao da propria conta.
+Os demais dominios (catalogo, eventos, observacoes etc.) ainda nao estao
+implementados.
 
 ## Requisitos
 
@@ -39,7 +40,7 @@ reais antes de iniciar o servidor. Nunca versione o arquivo local ou credenciais
 | `PORT`                     | Nao         | `3000`        | Inteiro de 1 a 65535                                         |
 | `SUPABASE_URL`             | Sim         | Nenhum        | URL HTTP ou HTTPS do projeto Supabase                        |
 | `SUPABASE_PUBLISHABLE_KEY` | Sim         | Nenhum        | Chave publica usada pelos clientes de autenticacao e usuario |
-| `SUPABASE_SECRET_KEY`      | Nao         | Nenhum        | Chave exclusiva de futuras operacoes administrativas         |
+| `SUPABASE_SECRET_KEY`      | Sim         | Nenhum        | Chave secreta, usada somente na exclusao de conta            |
 | `PASSWORD_RESET_REDIRECT_URL` | Sim      | Nenhum        | Destino autorizado: `veronicalens://auth/reset-password`     |
 | `CORS_ORIGINS`             | Nao         | Vazio         | Origens de navegador permitidas, separadas por virgula       |
 
@@ -47,7 +48,10 @@ A configuracao e validada antes de abrir a porta. Erros indicam os campos
 invalidos sem imprimir seus valores. A criacao do cliente nao verifica
 conectividade com Supabase.
 
-Os fluxos atuais de autenticacao nao precisam da chave administrativa.
+`SUPABASE_SECRET_KEY` e obrigatoria: a API nao inicia sem ela. A chave ignora
+RLS e as policies de Storage; e usada apenas pelo modulo `account` e nunca deve
+ser enviada ao app ou registrada em logs. Os demais fluxos usam a chave publica
+e, quando ha usuario, o JWT dele.
 Em producao, configure as variaveis no servico de hospedagem.
 GitHub Actions secrets so sao necessarios quando o workflow acessa recursos
 que exigem essas credenciais; os testes atuais nao precisam delas.
@@ -110,6 +114,7 @@ src/
   config/                # Validacao de ambiente e clientes Supabase
   docs/                  # Contrato OpenAPI e Swagger UI
   modules/
+    account/             # Exclusao da propria conta (chave secreta)
     auth/                # Schemas, rotas, controller, service e model
     profile/             # Perfil do usuario autenticado
   shared/
@@ -119,6 +124,7 @@ src/
     logging/             # Logger compartilhado
 tests/
   helpers/               # Mocks tipados compartilhados dos models
+  account/               # Testes do modulo de conta
   auth/                  # Testes do modulo de autenticacao
   profile/               # Testes do modulo de perfil
 ```
@@ -241,6 +247,31 @@ O perfil e criado por trigger no cadastro. Se nao for encontrado ou nao estiver
 visivel para o usuario, a API retorna `404 PROFILE_NOT_FOUND`.
 Os testes usam mocks e nao verificam as policies de RLS; essa verificacao fica
 nos testes pgTAP do repositorio do banco.
+
+## Exclusao de conta
+
+`DELETE /api/v1/account` exige bearer token e o corpo
+`{ "confirmation": "DELETE" }`. A exclusao e irreversivel.
+
+Ordem das etapas, executadas com a chave secreta:
+
+1. Remove os arquivos do bucket `observations` listados em `observation_media`.
+2. Remove os arquivos da pasta do usuario no bucket `avatars`.
+3. Exclui o usuario no Supabase Auth; as linhas do banco ligadas a
+   `auth.users` sao removidas por `on delete cascade`.
+
+Os arquivos sao removidos antes porque o cascade nao alcanca o Storage. Se uma
+etapa falhar, as seguintes nao rodam e a API retorna
+`503 ACCOUNT_DELETION_UNAVAILABLE`; repetir a requisicao continua de onde
+parou. Um usuario ja inexistente no Auth e tratado como excluido.
+
+A frase de confirmacao evita exclusao acidental, mas **nao protege contra um
+access token vazado**. Quando o login com Google estiver implementado, avalie
+exigir reautenticacao recente. Access tokens ja emitidos continuam validos ate
+expirar; o app deve apagar a sessao local apos a resposta `204`.
+
+Arquivos em `observations` que nao estejam registrados em `observation_media`
+nao sao encontrados por essa listagem.
 
 ## Headers de seguranca e CORS
 

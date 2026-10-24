@@ -25,6 +25,7 @@ describe('API documentation', () => {
     expect(response.body.openapi).toBe('3.0.3');
 
     expect(Object.keys(response.body.paths).sort()).toEqual([
+      '/api/v1/account',
       '/api/v1/auth/me',
       '/api/v1/auth/password',
       '/api/v1/auth/password/recovery',
@@ -146,6 +147,25 @@ describe('API documentation', () => {
     expect(avatar.delete.security).toEqual([{ bearerAuth: [] }]);
     expect(Object.keys(avatar.put.requestBody.content).sort()).toEqual([
       'image/jpeg', 'image/png', 'image/webp',
+    ]);
+  });
+
+  it('documents the protected account deletion', async () => {
+    const { app } = setup();
+
+    const response = await request(app)
+      .get('/openapi.json')
+      .expect(200);
+
+    const operation = response.body.paths['/api/v1/account'].delete;
+
+    expect(operation.security).toEqual([{ bearerAuth: [] }]);
+    expect(
+      response.body.components.schemas.DeleteAccountInput.properties
+        .confirmation.enum,
+    ).toEqual(['DELETE']);
+    expect(Object.keys(operation.responses).sort()).toEqual([
+      '204', '400', '401', '500', '503',
     ]);
   });
 

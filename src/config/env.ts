@@ -40,7 +40,7 @@ const envSchema = z.object({
     'Deve usar HTTP ou HTTPS.',
   )),
   SUPABASE_PUBLISHABLE_KEY: z.string().trim().min(1),
-  SUPABASE_SECRET_KEY: z.string().trim().min(1).optional(),
+  SUPABASE_SECRET_KEY: z.string().trim().min(1),
   PASSWORD_RESET_REDIRECT_URL: z.literal(
     'veronicalens://auth/reset-password',
   ),

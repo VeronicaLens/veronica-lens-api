@@ -67,6 +67,7 @@ export const openApiDocument = {
     { name: 'Health' },
     { name: 'Authentication' },
     { name: 'Profile' },
+    { name: 'Account' },
   ],
 
   paths: {
@@ -304,6 +305,25 @@ export const openApiDocument = {
         },
       },
     },
+
+    '/api/v1/account': {
+      delete: {
+        tags: ['Account'],
+        operationId: 'deleteAccount',
+        summary: 'Permanently delete the authenticated account',
+        description:
+          'Irreversible. Removes observation media and avatar files, then the user; database rows are removed by cascade. Send {"confirmation": "DELETE"}. Issued access tokens remain valid until they expire; the app must clear its local session.',
+        security: [{ bearerAuth: [] }],
+        requestBody: requestBody('DeleteAccountInput'),
+        responses: {
+          '204': { description: 'Account deleted; no response body' },
+          '400': errorResponse('Missing or invalid confirmation'),
+          '401': errorResponse('Missing, invalid or expired token'),
+          '500': errorResponse('Unexpected server error'),
+          '503': errorResponse('Account could not be deleted; try again later'),
+        },
+      },
+    },
   },
 
   components: {
@@ -509,6 +529,15 @@ export const openApiDocument = {
         required: ['profile'],
         properties: {
           profile: ref('Profile'),
+        },
+      },
+
+      DeleteAccountInput: {
+        type: 'object',
+        required: ['confirmation'],
+        additionalProperties: false,
+        properties: {
+          confirmation: { type: 'string', enum: ['DELETE'] },
         },
       },
 

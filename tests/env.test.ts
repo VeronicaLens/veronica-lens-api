@@ -6,6 +6,7 @@ function validSource(): NodeJS.ProcessEnv {
   return {
     SUPABASE_URL: 'https://example.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'test-publishable-key',
+    SUPABASE_SECRET_KEY: 'test-secret-key',
     PASSWORD_RESET_REDIRECT_URL:'veronicalens://auth/reset-password',
   };
 }
@@ -16,7 +17,26 @@ describe('loadEnv', () => {
 
     expect(env.NODE_ENV).toBe('development');
     expect(env.PORT).toBe(3000);
-    expect(env.SUPABASE_SECRET_KEY).toBeUndefined();
+    expect(env.CORS_ORIGINS).toEqual([]);
+  });
+
+  it.each([undefined, '', '   '])(
+    'requires the Supabase secret key (%j)',
+    (secret) => {
+      expect(() =>
+        loadEnv({ ...validSource(), SUPABASE_SECRET_KEY: secret }),
+      ).toThrow(/SUPABASE_SECRET_KEY/);
+    },
+  );
+
+  it('does not expose the secret key in configuration errors', () => {
+    expect(() =>
+      loadEnv({
+        ...validSource(),
+        SUPABASE_SECRET_KEY: 'sensitive-secret-value',
+        NODE_ENV: 'invalid',
+      }),
+    ).toThrow(/^(?!.*sensitive-secret-value).*$/s);
   });
 
   it('accepts explicit configuration', () => {

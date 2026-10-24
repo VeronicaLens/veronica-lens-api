@@ -1,6 +1,11 @@
 import { createApp } from './app.js';
 import { loadEnv } from './config/env.js';
-import { createAuthClient, createUserClient } from './config/supabase.js';
+import {
+  createAdminClient,
+  createAuthClient,
+  createUserClient,
+} from './config/supabase.js';
+import { SupabaseAccountModel } from './modules/account/account.model.js';
 import { SupabaseAuthModel } from './modules/auth/auth.model.js';
 import { SupabaseAvatarStorage } from './modules/profile/avatar.storage.js';
 import { SupabaseProfileModel } from './modules/profile/profile.model.js';
@@ -19,10 +24,14 @@ const createClientForUser = (accessToken: string) =>
 const profileModel = new SupabaseProfileModel(createClientForUser);
 const avatarStorage = new SupabaseAvatarStorage(createClientForUser);
 
+const adminClient = createAdminClient(env);
+const accountModel = new SupabaseAccountModel(() => adminClient);
+
 const app = createApp({
   authModel,
   profileModel,
   avatarStorage,
+  accountModel,
   corsOrigins: env.CORS_ORIGINS,
   httpsOnly: env.NODE_ENV === 'production',
 });

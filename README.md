@@ -8,9 +8,10 @@ cadastro, login por senha e com Google, renovacao de sessao, consulta do
 usuario autenticado, logout da sessao atual, solicitacao de recuperacao de
 senha por email, atualizacao da senha com a sessao do proprio usuario,
 consulta/edicao do proprio perfil, upload/remocao de avatar, exclusao da
-propria conta e consulta ao catalogo de objetos celestes.
-Os demais dominios (catalogo, eventos, observacoes etc.) ainda nao estao
-implementados.
+propria conta e consulta ao catalogo de objetos celestes. Tambem estao
+implementados eventos astronomicos, trilhas e licoes, historico de observacoes
+com upload de fotos e registro de dispositivos para notificacoes push.
+Os demais dominios (health e conectividade) ainda nao estao implementados.
 
 ## Requisitos
 
@@ -44,6 +45,7 @@ reais antes de iniciar o servidor. Nunca versione o arquivo local ou credenciais
 | `SUPABASE_SECRET_KEY`      | Sim         | Nenhum        | Chave secreta, usada somente na exclusao de conta            |
 | `PASSWORD_RESET_REDIRECT_URL` | Sim      | Nenhum        | Destino autorizado: `veronicalens://auth/reset-password`     |
 | `CORS_ORIGINS`             | Nao         | Vazio         | Origens de navegador permitidas, separadas por virgula       |
+| `NOTIFICATIONS_DISPATCH_SECRET` | Nao    | Nenhum        | Segredo do job de envio (minimo 32 caracteres). Sem ele, o envio fica desabilitado |
 
 A configuracao e validada antes de abrir a porta. Erros indicam os campos
 invalidos sem imprimir seus valores. A criacao do cliente nao verifica
@@ -122,6 +124,7 @@ src/
     conditions/          # Avaliacao das condicoes de observacao
     events/              # Eventos astronomicos curados (Supabase, RLS)
     learning/            # Trilhas e licoes publicadas, progresso por usuario
+    notifications/       # Tokens Expo por dispositivo e envio de eventos
     planning/            # Recomendacao da melhor janela de observacao
     profile/             # Perfil do usuario autenticado
     sky-guide/           # Posicoes dos objetos do catalogo para o observador
@@ -141,6 +144,7 @@ tests/
   conditions/            # Avaliacao, service e rotas de condicoes
   events/                # Eventos curados
   learning/              # Trilhas, licoes e progresso
+  notifications/         # Registro de dispositivos, envio e cliente Expo
   planning/              # Recomendacao de janelas de observacao
   profile/               # Testes do modulo de perfil
   sky-guide/             # Testes do guia do ceu
@@ -578,6 +582,36 @@ Erros de banco ou de Storage nunca expõem detalhes internos. Falha de banco
 retorna `503 OBSERVATION_UNAVAILABLE`; falha de Storage, `503
 OBSERVATION_STORAGE_UNAVAILABLE`, exceto tamanho (413), tipo (415) e token (401),
 que seguem o status do Storage.
+
+## Notificacoes push
+
+Os dispositivos usam tokens Expo (`ExponentPushToken[...]`). Rotas de usuario
+exigem bearer token e so alteram os proprios tokens (RLS).
+
+- `PUT /api/v1/notifications/devices` registra ou atualiza o token com
+  `{ "token", "platform": "android" | "ios" }`. Um token ja vinculado a outro
+  usuario retorna `409 DEVICE_TOKEN_IN_USE`.
+- `DELETE /api/v1/notifications/devices/{token}` remove o token, com 204.
+  Token malformado ou inexistente nao gera erro.
+- `POST /api/v1/notifications/dispatch` envia as notificacoes devidas. Nao usa
+  token de usuario: exige `Authorization: Bearer <NOTIFICATIONS_DISPATCH_SECRET>`.
+  Sem o segredo configurado, responde `503 DISPATCH_DISABLED`.
+
+Regra de envio: eventos publicados nas proximas 30 dias. Um evento e enviado
+quando `agora >= starts_at - lead_minutes` da preferencia do usuario
+(`event_preferences`). Cada par evento/dispositivo e gravado em
+`notification_deliveries` antes do envio, o que evita duplicidade em execucoes
+repetidas. Tokens que a Expo marca como `DeviceNotRegistered` sao desativados.
+
+Limitacoes conhecidas:
+
+- `sent` significa que a Expo aceitou a mensagem, nao que ela foi entregue. Os
+  recibos da Expo nao sao consultados.
+- Se a execucao cair depois de gravar os registros pendentes e antes do envio,
+  esses registros ficam `pending` e nao sao reenviados automaticamente.
+- A lista de usuarios para `in()` nao e dividida em lotes.
+- O envio precisa de um agendador externo (por exemplo, cron ou GitHub Actions)
+  que chame o endpoint de dispatch periodicamente.
 
 ## Exclusao de conta
 

@@ -6,6 +6,10 @@ import type { EphemerisProviderPort } from '../../src/modules/astronomy/index.js
 import type { EventsModelPort } from '../../src/modules/events/events.model.js';
 import type { LearningModelPort } from '../../src/modules/learning/learning.model.js';
 import type { ObservationsModelPort } from '../../src/modules/observations/observations.model.js';
+import type { DispatchModelPort } from '../../src/modules/notifications/notifications.dispatch-model.js';
+import type { PushSender } from '../../src/modules/notifications/expo-push.client.js';
+import type { DeviceModelPort } from '../../src/modules/notifications/notifications.model.js';
+import { NotificationsService } from '../../src/modules/notifications/notifications.service.js';
 import type { WeatherProviderPort } from '../../src/modules/weather/index.js';
 import type { AuthModelPort } from '../../src/modules/auth/auth.model.js';
 import { StaticCatalogModel } from '../../src/modules/catalog/catalog.model.js';
@@ -113,6 +117,31 @@ export function createObservationsModelMock() {
   } satisfies ObservationsModelPort;
 }
 
+export function createDeviceModelMock() {
+  return {
+    registerDevice: vi.fn<DeviceModelPort['registerDevice']>(),
+    removeDevice: vi.fn<DeviceModelPort['removeDevice']>(),
+  } satisfies DeviceModelPort;
+}
+
+export function createDispatchModelMock() {
+  return {
+    findUpcomingEvents: vi.fn<DispatchModelPort['findUpcomingEvents']>(),
+    findEnabledPreferences: vi.fn<DispatchModelPort['findEnabledPreferences']>(),
+    findActiveTokens: vi.fn<DispatchModelPort['findActiveTokens']>(),
+    insertPendingDeliveries: vi.fn<DispatchModelPort['insertPendingDeliveries']>(),
+    markDeliverySent: vi.fn<DispatchModelPort['markDeliverySent']>(),
+    markDeliveryFailed: vi.fn<DispatchModelPort['markDeliveryFailed']>(),
+    deactivateTokens: vi.fn<DispatchModelPort['deactivateTokens']>(),
+  } satisfies DispatchModelPort;
+}
+
+export function createPushSenderMock() {
+  return {
+    send: vi.fn<PushSender['send']>(),
+  } satisfies PushSender;
+}
+
 // Every dependency required by createApp; override only what a test uses.
 export function createAppMocks() {
   return {
@@ -127,5 +156,10 @@ export function createAppMocks() {
     eventsModel: createEventsModelMock(),
     learningModel: createLearningModelMock(),
     observationsModel: createObservationsModelMock(),
+    notificationsService: new NotificationsService(
+      createDeviceModelMock(),
+      createDispatchModelMock(),
+      createPushSenderMock(),
+    ),
   };
 }

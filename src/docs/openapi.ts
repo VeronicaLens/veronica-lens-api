@@ -82,6 +82,7 @@ export const openApiDocument = {
     { name: 'Planning' },
     { name: 'Events' },
     { name: 'Learning' },
+    { name: 'Notifications' },
     { name: 'Observations' },
   ],
 
@@ -781,6 +782,129 @@ export const openApiDocument = {
           '404': errorResponse('Lesson not found or not published'),
           '500': errorResponse('Unexpected server error'),
           '503': errorResponse('Learning or authentication service unavailable'),
+        },
+      },
+    },
+
+    '/api/v1/notifications/devices': {
+      put: {
+        tags: ['Notifications'],
+        operationId: 'registerNotificationDevice',
+        summary: 'Register or refresh an Expo push token for the caller',
+        description:
+          'Upserts the token as active. A token already bound to another user returns 409.',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: jsonContent({
+            type: 'object',
+            required: ['token', 'platform'],
+            properties: {
+              token: { type: 'string', example: 'ExponentPushToken[xxxxxxxxxxxxxxxxxxxxxx]' },
+              platform: { type: 'string', enum: ['android', 'ios'] },
+            },
+          }),
+        },
+        responses: {
+          '200': {
+            description: 'Device registered',
+            content: jsonContent({
+              type: 'object',
+              required: ['data'],
+              properties: {
+                data: {
+                  type: 'object',
+                  required: ['device'],
+                  properties: {
+                    device: {
+                      type: 'object',
+                      required: ['id', 'token', 'platform', 'active'],
+                      properties: {
+                        id: { type: 'string', format: 'uuid' },
+                        token: { type: 'string' },
+                        platform: { type: 'string', enum: ['android', 'ios'] },
+                        active: { type: 'boolean' },
+                      },
+                    },
+                  },
+                },
+              },
+            }),
+          },
+          '400': errorResponse('Invalid token or platform'),
+          '401': errorResponse('Missing, invalid or expired token'),
+          '409': errorResponse('Token is already registered to another user'),
+          '500': errorResponse('Unexpected server error'),
+          '503': errorResponse('Notification storage or database unavailable'),
+        },
+      },
+    },
+
+    '/api/v1/notifications/devices/{token}': {
+      delete: {
+        tags: ['Notifications'],
+        operationId: 'removeNotificationDevice',
+        summary: 'Remove an Expo push token of the caller',
+        description:
+          'Deletes the token row. A malformed or unknown token is a no-op, so the response is still 204.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'token', in: 'path', required: true, schema: { type: 'string' } },
+        ],
+        responses: {
+          '204': { description: 'Device removed' },
+          '401': errorResponse('Missing, invalid or expired token'),
+          '500': errorResponse('Unexpected server error'),
+          '503': errorResponse('Notification storage or database unavailable'),
+        },
+      },
+    },
+
+    '/api/v1/notifications/dispatch': {
+      post: {
+        tags: ['Notifications'],
+        operationId: 'dispatchNotifications',
+        summary: 'Send due astronomical event notifications (scheduled jobs only)',
+        description:
+          'Requires `Authorization: Bearer <NOTIFICATIONS_DISPATCH_SECRET>`, not a user token. Sends to Expo for events within the next 30 days whose lead window has started. Each event and device pair is recorded once. `sent` means Expo accepted the message, not that it was delivered.',
+        responses: {
+          '200': {
+            description: 'Dispatch summary',
+            content: jsonContent({
+              type: 'object',
+              required: ['data'],
+              properties: {
+                data: {
+                  type: 'object',
+                  required: ['summary'],
+                  properties: {
+                    summary: {
+                      type: 'object',
+                      required: [
+                        'events',
+                        'recipients',
+                        'attempted',
+                        'sent',
+                        'failed',
+                        'deactivatedTokens',
+                      ],
+                      properties: {
+                        events: { type: 'integer' },
+                        recipients: { type: 'integer' },
+                        attempted: { type: 'integer' },
+                        sent: { type: 'integer' },
+                        failed: { type: 'integer' },
+                        deactivatedTokens: { type: 'integer' },
+                      },
+                    },
+                  },
+                },
+              },
+            }),
+          },
+          '401': errorResponse('Missing or invalid dispatch credentials'),
+          '500': errorResponse('Unexpected server error'),
+          '503': errorResponse('Dispatch is not configured or storage is unavailable'),
         },
       },
     },

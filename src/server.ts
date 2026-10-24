@@ -15,6 +15,10 @@ import { StaticCatalogModel } from './modules/catalog/catalog.model.js';
 import { SupabaseEventsModel } from './modules/events/events.model.js';
 import { SupabaseLearningModel } from './modules/learning/learning.model.js';
 import { SupabaseObservationsModel } from './modules/observations/observations.model.js';
+import { ExpoPushClient } from './modules/notifications/expo-push.client.js';
+import { SupabaseDeviceModel } from './modules/notifications/notifications.model.js';
+import { SupabaseDispatchModel } from './modules/notifications/notifications.dispatch-model.js';
+import { NotificationsService } from './modules/notifications/notifications.service.js';
 import { SupabaseAvatarStorage } from './modules/profile/avatar.storage.js';
 import { SupabaseProfileModel } from './modules/profile/profile.model.js';
 import {
@@ -39,6 +43,12 @@ const avatarStorage = new SupabaseAvatarStorage(createClientForUser);
 const adminClient = createAdminClient(env);
 const accountModel = new SupabaseAccountModel(() => adminClient);
 
+const notificationsService = new NotificationsService(
+  new SupabaseDeviceModel(createClientForUser),
+  new SupabaseDispatchModel(adminClient),
+  new ExpoPushClient(),
+);
+
 const app = createApp({
   authModel,
   profileModel,
@@ -50,6 +60,8 @@ const app = createApp({
   eventsModel: new SupabaseEventsModel(createClientForUser),
   learningModel: new SupabaseLearningModel(createClientForUser),
   observationsModel: new SupabaseObservationsModel(createClientForUser),
+  notificationsService,
+  notificationsDispatchSecret: env.NOTIFICATIONS_DISPATCH_SECRET,
   corsOrigins: env.CORS_ORIGINS,
   httpsOnly: env.NODE_ENV === 'production',
 });

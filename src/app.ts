@@ -15,6 +15,8 @@ import { createLearningRouter } from './modules/learning/learning.routes.js';
 import { createEventsRouter } from './modules/events/events.routes.js';
 import type { ObservationsModelPort } from './modules/observations/observations.model.js';
 import { createObservationsRouter } from './modules/observations/observations.routes.js';
+import { createNotificationsRouter } from './modules/notifications/notifications.routes.js';
+import type { NotificationsService } from './modules/notifications/notifications.service.js';
 import type { ProfileModelPort } from './modules/profile/profile.model.js';
 import { createPlanningRouter } from './modules/planning/planning.routes.js';
 import type { AvatarStoragePort } from './modules/profile/avatar.storage.js';
@@ -42,6 +44,8 @@ interface AppOptions {
   eventsModel: EventsModelPort;
   learningModel: LearningModelPort;
   observationsModel: ObservationsModelPort;
+  notificationsService: NotificationsService;
+  notificationsDispatchSecret?: string;
   corsOrigins?: readonly string[];
   httpsOnly?: boolean;
 }
@@ -115,6 +119,14 @@ export function createApp(options: AppOptions) {
   app.use(
     '/api/v1/observations',
     createObservationsRouter(options.observationsModel, authenticate),
+  );
+  app.use(
+    '/api/v1/notifications',
+    createNotificationsRouter(
+      options.notificationsService,
+      authenticate,
+      options.notificationsDispatchSecret,
+    ),
   );
   app.use(createDocsRouter());
 

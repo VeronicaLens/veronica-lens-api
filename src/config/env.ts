@@ -45,6 +45,11 @@ const envSchema = z.object({
     'veronicalens://auth/reset-password',
   ),
   CORS_ORIGINS: corsOriginsSchema,
+  // Optional: when unset, the dispatch endpoint answers 503.
+  NOTIFICATIONS_DISPATCH_SECRET: z.preprocess(
+    (value) => (value === '' ? undefined : value),
+    z.string().trim().min(32, 'Use pelo menos 32 caracteres.').optional(),
+  ),
 });
 
 export type Env = z.infer<typeof envSchema>;

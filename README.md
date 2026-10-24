@@ -7,8 +7,8 @@ O projeto esta sendo reconstruido incrementalmente. Atualmente implementa
 cadastro, login por senha e com Google, renovacao de sessao, consulta do
 usuario autenticado, logout da sessao atual, solicitacao de recuperacao de
 senha por email, atualizacao da senha com a sessao do proprio usuario,
-consulta/edicao do proprio perfil, upload/remocao de avatar e exclusao da
-propria conta.
+consulta/edicao do proprio perfil, upload/remocao de avatar, exclusao da
+propria conta e consulta ao catalogo de objetos celestes.
 Os demais dominios (catalogo, eventos, observacoes etc.) ainda nao estao
 implementados.
 
@@ -117,6 +117,7 @@ src/
   modules/
     account/             # Exclusao da propria conta (chave secreta)
     auth/                # Schemas, rotas, controller, service e model
+    catalog/             # Catalogo estatico de objetos celestes
     profile/             # Perfil do usuario autenticado
   shared/
     auth/                # Middleware, contexto autenticado e requireAuth
@@ -127,6 +128,7 @@ tests/
   helpers/               # Mocks tipados compartilhados dos models
   account/               # Testes do modulo de conta
   auth/                  # Testes do modulo de autenticacao
+  catalog/               # Testes do catalogo e da integridade dos dados
   profile/               # Testes do modulo de perfil
 ```
 
@@ -275,6 +277,30 @@ O perfil e criado por trigger no cadastro. Se nao for encontrado ou nao estiver
 visivel para o usuario, a API retorna `404 PROFILE_NOT_FOUND`.
 Os testes usam mocks e nao verificam as policies de RLS; essa verificacao fica
 nos testes pgTAP do repositorio do banco.
+
+## Catalogo de objetos celestes
+
+`GET /api/v1/catalog/celestial-objects` lista e busca objetos; `GET
+/api/v1/catalog/celestial-objects/{id}` retorna um objeto. As duas rotas
+exigem bearer token.
+
+- Parametros de busca: `q` (1 a 80 caracteres), `type` (`moon`, `planet`,
+  `star`, `constellation`) e `limit` (1 a 50, padrao 20). Parametros
+  desconhecidos ou repetidos retornam `400`.
+- A busca ignora maiusculas e acentos e compara id, nome e apelidos:
+  `orion` encontra `Órion`.
+- IDs inexistentes ou malformados retornam `404 CELESTIAL_OBJECT_NOT_FOUND`.
+
+O catalogo e estatico, em `src/modules/catalog/catalog.data.ts`, com 24 objetos:
+
+- Lua e planetas usam coordenadas `ephemeris`, com o ID do objeto no JPL
+  Horizons; a posicao depende da data e sera calculada pelos proximos modulos.
+- Estrelas e constelacoes usam coordenadas `fixed` J2000 em graus. As
+  coordenadas de constelacoes sao centros aproximados, apenas para orientacao.
+
+Alteracoes no catalogo mudam a API publica; os testes validam IDs unicos e
+faixas de coordenadas. O model devolve copias, entao nenhuma requisicao altera
+os dados em memoria.
 
 ## Exclusao de conta
 

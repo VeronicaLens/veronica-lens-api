@@ -5,6 +5,8 @@ import { createAccountRouter } from './modules/account/account.routes.js';
 import type { AuthModelPort } from './modules/auth/auth.model.js';
 import { createAuthRouter } from './modules/auth/auth.routes.js';
 import { AuthService } from './modules/auth/auth.service.js';
+import type { CatalogModelPort } from './modules/catalog/catalog.model.js';
+import { createCatalogRouter } from './modules/catalog/catalog.routes.js';
 import type { ProfileModelPort } from './modules/profile/profile.model.js';
 import type { AvatarStoragePort } from './modules/profile/avatar.storage.js';
 import { createProfileRouter } from './modules/profile/profile.routes.js';
@@ -23,6 +25,7 @@ interface AppOptions {
   profileModel: ProfileModelPort;
   avatarStorage: AvatarStoragePort;
   accountModel: AccountModelPort;
+  catalogModel: CatalogModelPort;
   corsOrigins?: readonly string[];
   httpsOnly?: boolean;
 }
@@ -59,6 +62,10 @@ export function createApp(options: AppOptions) {
   app.use(
     '/api/v1/account',
     createAccountRouter(options.accountModel, authenticate),
+  );
+  app.use(
+    '/api/v1/catalog',
+    createCatalogRouter(options.catalogModel, authenticate),
   );
   app.use(createDocsRouter());
 

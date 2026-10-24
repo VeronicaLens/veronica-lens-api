@@ -7,6 +7,7 @@ import {
 } from './config/supabase.js';
 import { SupabaseAccountModel } from './modules/account/account.model.js';
 import { SupabaseAuthModel } from './modules/auth/auth.model.js';
+import { StaticCatalogModel } from './modules/catalog/catalog.model.js';
 import { SupabaseAvatarStorage } from './modules/profile/avatar.storage.js';
 import { SupabaseProfileModel } from './modules/profile/profile.model.js';
 import { logger } from './shared/logging/logger.js';
@@ -32,6 +33,7 @@ const app = createApp({
   profileModel,
   avatarStorage,
   accountModel,
+  catalogModel: new StaticCatalogModel(),
   corsOrigins: env.CORS_ORIGINS,
   httpsOnly: env.NODE_ENV === 'production',
 });

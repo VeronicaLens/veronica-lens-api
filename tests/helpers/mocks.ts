@@ -3,6 +3,7 @@ import { vi } from 'vitest';
 
 import type { AccountModelPort } from '../../src/modules/account/account.model.js';
 import type { AuthModelPort } from '../../src/modules/auth/auth.model.js';
+import { StaticCatalogModel } from '../../src/modules/catalog/catalog.model.js';
 import type { AvatarStoragePort } from '../../src/modules/profile/avatar.storage.js';
 import type { ProfileModelPort } from '../../src/modules/profile/profile.model.js';
 
@@ -71,5 +72,7 @@ export function createAppMocks() {
     profileModel: createProfileModelMock(),
     avatarStorage: createAvatarStorageMock(),
     accountModel: createAccountModelMock(),
+    // Static data with no external dependency; the real model is used.
+    catalogModel: new StaticCatalogModel(),
   };
 }

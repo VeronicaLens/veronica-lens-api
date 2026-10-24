@@ -68,6 +68,7 @@ export const openApiDocument = {
     { name: 'Authentication' },
     { name: 'Profile' },
     { name: 'Account' },
+    { name: 'Catalog' },
   ],
 
   paths: {
@@ -342,6 +343,101 @@ export const openApiDocument = {
         },
       },
     },
+
+    '/api/v1/catalog/celestial-objects': {
+      get: {
+        tags: ['Catalog'],
+        operationId: 'searchCelestialObjects',
+        summary: 'Search the celestial object catalog',
+        description:
+          'Search is case- and accent-insensitive and matches id, name or aliases. Objects keep catalog order.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'q',
+            in: 'query',
+            schema: { type: 'string', minLength: 1, maxLength: 80 },
+          },
+          {
+            name: 'type',
+            in: 'query',
+            schema: {
+              type: 'string',
+              enum: ['moon', 'planet', 'star', 'constellation'],
+            },
+          },
+          {
+            name: 'limit',
+            in: 'query',
+            schema: { type: 'integer', minimum: 1, maximum: 50, default: 20 },
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Matching objects',
+            content: jsonContent({
+              type: 'object',
+              required: ['data', 'meta'],
+              properties: {
+                data: {
+                  type: 'object',
+                  required: ['objects'],
+                  properties: {
+                    objects: { type: 'array', items: ref('CelestialObject') },
+                  },
+                },
+                meta: {
+                  type: 'object',
+                  required: ['count'],
+                  properties: { count: { type: 'integer', minimum: 0 } },
+                },
+              },
+            }),
+          },
+          '400': errorResponse('Invalid query parameters'),
+          '401': errorResponse('Missing, invalid or expired token'),
+          '500': errorResponse('Unexpected server error'),
+          '503': errorResponse('Authentication provider unavailable'),
+        },
+      },
+    },
+
+    '/api/v1/catalog/celestial-objects/{id}': {
+      get: {
+        tags: ['Catalog'],
+        operationId: 'getCelestialObject',
+        summary: 'Get a celestial object by id',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$' },
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Celestial object',
+            content: jsonContent({
+              type: 'object',
+              required: ['data'],
+              properties: {
+                data: {
+                  type: 'object',
+                  required: ['object'],
+                  properties: { object: ref('CelestialObject') },
+                },
+              },
+            }),
+          },
+          '401': errorResponse('Missing, invalid or expired token'),
+          '404': errorResponse('Celestial object not found'),
+          '500': errorResponse('Unexpected server error'),
+          '503': errorResponse('Authentication provider unavailable'),
+        },
+      },
+    },
   },
 
   components: {
@@ -560,6 +656,50 @@ export const openApiDocument = {
         required: ['profile'],
         properties: {
           profile: ref('Profile'),
+        },
+      },
+
+      CelestialObject: {
+        type: 'object',
+        required: ['id', 'name', 'type', 'aliases', 'magnitude', 'coordinates'],
+        properties: {
+          id: { type: 'string' },
+          name: { type: 'string' },
+          type: {
+            type: 'string',
+            enum: ['moon', 'planet', 'star', 'constellation'],
+          },
+          aliases: { type: 'array', items: { type: 'string' } },
+          magnitude: {
+            type: 'number',
+            nullable: true,
+            description: 'Apparent magnitude; null for moving or extended objects.',
+          },
+          coordinates: {
+            oneOf: [ref('FixedCoordinates'), ref('EphemerisCoordinates')],
+            discriminator: { propertyName: 'kind' },
+          },
+        },
+      },
+
+      FixedCoordinates: {
+        type: 'object',
+        required: ['kind', 'epoch', 'rightAscensionDegrees', 'declinationDegrees'],
+        properties: {
+          kind: { type: 'string', enum: ['fixed'] },
+          epoch: { type: 'string', enum: ['J2000'] },
+          rightAscensionDegrees: { type: 'number', minimum: 0, maximum: 360 },
+          declinationDegrees: { type: 'number', minimum: -90, maximum: 90 },
+        },
+      },
+
+      EphemerisCoordinates: {
+        type: 'object',
+        required: ['kind', 'provider', 'providerObjectId'],
+        properties: {
+          kind: { type: 'string', enum: ['ephemeris'] },
+          provider: { type: 'string', enum: ['jpl-horizons'] },
+          providerObjectId: { type: 'string' },
         },
       },
 

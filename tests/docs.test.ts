@@ -34,6 +34,8 @@ describe('API documentation', () => {
       '/api/v1/auth/sign-in',
       '/api/v1/auth/sign-out',
       '/api/v1/auth/sign-up',
+      '/api/v1/catalog/celestial-objects',
+      '/api/v1/catalog/celestial-objects/{id}',
       '/api/v1/profile',
       '/api/v1/profile/avatar',
       '/health',

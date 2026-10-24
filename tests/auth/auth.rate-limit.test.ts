@@ -11,6 +11,8 @@ function setup() {
     refresh: vi.fn<AuthModelPort['refresh']>(),
     getUser: vi.fn<AuthModelPort['getUser']>(),
     signOut: vi.fn<AuthModelPort['signOut']>(),
+    requestPasswordRecovery:
+      vi.fn<AuthModelPort['requestPasswordRecovery']>(),
   };
 
   return {
@@ -56,11 +58,14 @@ describe('Authentication rate limit', () => {
     expect(model.signUp).not.toHaveBeenCalled();
   });
 
-  it('shares the limit between registration and login', async () => {
-    const { app } = setup();
+  it('shares the limit between registration, login, refresh and recovery', async () => {
+    const { app, model } = setup();
+    const endpoints = [
+      'sign-up', 'sign-in', 'refresh', 'password/recovery',
+    ];
 
     for (let attempt = 0; attempt < 20; attempt += 1) {
-      const endpoint = attempt % 2 === 0 ? 'sign-up' : 'sign-in';
+      const endpoint = endpoints[attempt % endpoints.length];
 
       await request(app)
         .post(`/api/v1/auth/${endpoint}`)
@@ -77,6 +82,13 @@ describe('Authentication rate limit', () => {
       .post('/api/v1/auth/sign-in')
       .send({})
       .expect(429);
+
+    await request(app)
+      .post('/api/v1/auth/password/recovery')
+      .send({ email: 'user@example.com' })
+      .expect(429);
+
+    expect(model.requestPasswordRecovery).not.toHaveBeenCalled();
 
     await request(app).get('/health').expect(200);
   });

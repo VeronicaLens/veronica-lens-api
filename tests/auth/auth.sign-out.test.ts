@@ -30,6 +30,8 @@ function setup() {
     refresh: vi.fn<AuthModelPort['refresh']>(),
     getUser: vi.fn<AuthModelPort['getUser']>(),
     signOut: vi.fn<AuthModelPort['signOut']>(),
+    requestPasswordRecovery:
+      vi.fn<AuthModelPort['requestPasswordRecovery']>(),
   };
 
   model.getUser.mockResolvedValue({
@@ -52,6 +54,8 @@ describe('Session sign-out', () => {
       refreshSession:
         vi.fn<SupabaseClient['auth']['refreshSession']>(),
       getUser: vi.fn<SupabaseClient['auth']['getUser']>(),
+      resetPasswordForEmail:
+        vi.fn<SupabaseClient['auth']['resetPasswordForEmail']>(),
       admin: {
         signOut:
           vi.fn<SupabaseClient['auth']['admin']['signOut']>(),
@@ -63,7 +67,10 @@ describe('Session sign-out', () => {
       error: null,
     });
 
-    const model = new SupabaseAuthModel(() => client);
+    const model = new SupabaseAuthModel(
+      () => client,
+      'veronicalens://auth/reset-password',
+    );
 
     await expect(
       model.signOut('test-access-token'),

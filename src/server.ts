@@ -8,6 +8,7 @@ const env = loadEnv();
 
 const authModel = new SupabaseAuthModel(
   () => createAuthClient(env).auth,
+  env.PASSWORD_RESET_REDIRECT_URL,
 );
 
 const app = createApp({ authModel });

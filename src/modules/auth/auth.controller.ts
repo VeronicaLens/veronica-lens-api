@@ -6,6 +6,7 @@ import {
   signInSchema,
   signUpSchema,
 } from './auth.schemas.js';
+import { passwordRecoverySchema } from './auth.schemas.js';
 import type { AuthService } from './auth.service.js';
 
 export class AuthController {
@@ -66,5 +67,21 @@ export class AuthController {
     await this.service.signOut(req.auth.accessToken);
 
     res.status(204).send();
+  };
+
+  requestPasswordRecovery = async (
+    req: Request,
+    res: Response,
+  ): Promise<void> => {
+    const input = parseBody(passwordRecoverySchema, req.body);
+
+    await this.service.requestPasswordRecovery(input.email);
+
+    res.status(202).json({
+      data: {
+        message:
+          'If the account exists, password recovery instructions were sent.',
+      },
+    });
   };
 }

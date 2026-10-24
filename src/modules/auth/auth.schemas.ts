@@ -30,3 +30,11 @@ export const refreshSessionSchema = z.object({
 export type RefreshSessionInput = z.infer<
   typeof refreshSessionSchema
 >;
+
+export const passwordRecoverySchema = z.object({
+  email: emailSchema,
+});
+
+export type PasswordRecoveryInput = z.infer<
+  typeof passwordRecoverySchema
+>;

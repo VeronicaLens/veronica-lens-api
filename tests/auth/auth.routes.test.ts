@@ -38,6 +38,8 @@ function setup() {
     refresh: vi.fn<AuthModelPort['refresh']>(),
     getUser: vi.fn<AuthModelPort['getUser']>(),
     signOut: vi.fn<AuthModelPort['signOut']>(),
+    requestPasswordRecovery:
+      vi.fn<AuthModelPort['requestPasswordRecovery']>(),
   };
 
   return {

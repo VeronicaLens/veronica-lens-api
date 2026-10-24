@@ -33,6 +33,8 @@ function setup() {
     refresh: vi.fn<AuthModelPort['refresh']>(),
     getUser: vi.fn<AuthModelPort['getUser']>(),
     signOut: vi.fn<AuthModelPort['signOut']>(),
+    requestPasswordRecovery:
+      vi.fn<AuthModelPort['requestPasswordRecovery']>(),
   };
 
   return {
@@ -52,9 +54,11 @@ describe('Authenticated user', () => {
       refreshSession:
         vi.fn<SupabaseClient['auth']['refreshSession']>(),
       getUser: vi.fn<SupabaseClient['auth']['getUser']>(),
+      resetPasswordForEmail:
+        vi.fn<SupabaseClient['auth']['resetPasswordForEmail']>(),
       admin: {
-      signOut:
-        vi.fn<SupabaseClient['auth']['admin']['signOut']>(),
+        signOut:
+          vi.fn<SupabaseClient['auth']['admin']['signOut']>(),
       },
     };
 
@@ -63,7 +67,10 @@ describe('Authenticated user', () => {
       error: null,
     });
 
-    const model = new SupabaseAuthModel(() => client);
+    const model = new SupabaseAuthModel(
+      () => client,
+      'veronicalens://auth/reset-password',
+    );
     const result = await model.getUser('test-access-token');
 
     expect(client.getUser).toHaveBeenCalledExactlyOnceWith(

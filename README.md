@@ -4,8 +4,10 @@ API do Veronica Lens em Express 5 e TypeScript, com autenticacao via Supabase,
 logs estruturados e documentacao HTTP interativa.
 
 O projeto esta sendo reconstruido incrementalmente. Atualmente implementa
-cadastro, login, renovacao de sessao e consulta do usuario autenticado.
-Logout, recuperacao de senha e os demais dominios ainda nao estao implementados.
+cadastro, login, renovacao de sessao, consulta do usuario autenticado, logout
+da sessao atual e solicitacao de recuperacao de senha por email.
+O recebimento do link no mobile, a atualizacao da senha e os demais dominios
+ainda nao estao implementados.
 
 ## Requisitos
 
@@ -37,6 +39,7 @@ reais antes de iniciar o servidor. Nunca versione o arquivo local ou credenciais
 | `SUPABASE_URL`             | Sim         | Nenhum        | URL HTTP ou HTTPS do projeto Supabase                        |
 | `SUPABASE_PUBLISHABLE_KEY` | Sim         | Nenhum        | Chave publica usada pelos clientes de autenticacao e usuario |
 | `SUPABASE_SECRET_KEY`      | Nao         | Nenhum        | Chave exclusiva de futuras operacoes administrativas         |
+| `PASSWORD_RESET_REDIRECT_URL` | Sim      | Nenhum        | Destino autorizado: `veronicalens://auth/reset-password`     |
 
 A configuracao e validada antes de abrir a porta. Erros indicam os campos
 invalidos sem imprimir seus valores. A criacao do cliente nao verifica
@@ -155,6 +158,22 @@ expirar; o aplicativo deve remover os tokens locais ao sair.
 Se a revogacao remota falhar, a API retorna erro. Apagar os tokens locais
 nao comprova que a sessao foi revogada no provedor.
 
+### Recuperacao de senha
+
+A solicitacao retorna HTTP 202 com mensagem generica, sem confirmar se existe
+uma conta. Falhas do provedor e limites de envio continuam retornando erro.
+A resposta nao comprova a entrega do email.
+
+Configure `PASSWORD_RESET_REDIRECT_URL=veronicalens://auth/reset-password`
+e autorize exatamente esse endereco no painel Supabase em
+**Authentication -> URL Configuration -> Redirect URLs**, sem curingas amplos.
+O destino vem da configuracao da API, nunca do corpo da requisicao.
+
+O fluxo completo ainda esta pendente: o mobile precisa registrar o scheme
+`veronicalens` em sua configuracao nativa, receber e validar o retorno e permitir
+a atualizacao da senha. Alterar o scheme exige gerar uma nova development build.
+Os testes locais usam mocks e nao verificam entrega de email nem abertura do app.
+
 ## Erros e logs
 
 Os erros usam o envelope:
@@ -181,7 +200,7 @@ Nunca registre tokens, senhas, chaves ou o contexto autenticado completo.
 
 ## Limite de tentativas
 
-Cadastro, login e refresh compartilham 20 requisicoes por IP a cada 15 minutos,
+Cadastro, login, refresh e recuperacao de senha compartilham 20 requisicoes por IP a cada 15 minutos,
 contando sucessos e falhas. O bloqueio retorna HTTP 429 e `Retry-After`.
 A consulta do usuario autenticado nao usa esse limitador.
 

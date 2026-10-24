@@ -270,4 +270,17 @@ export class AuthService {
       throwAuthError(result.error);
     }
   }
+
+  async requestPasswordRecovery(email: string): Promise<void> {
+    const result = await this.model.requestPasswordRecovery(email);
+
+    if (result.error) {
+      if (result.error.code === 'user_not_found') {
+        logger.info('Password recovery completed without an eligible account');
+        return;
+      }
+
+      throwAuthError(result.error);
+    }
+  }
 }

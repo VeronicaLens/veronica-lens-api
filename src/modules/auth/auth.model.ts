@@ -32,17 +32,25 @@ export interface AuthModelPort {
   refresh(input: RefreshSessionInput): Promise<AuthSessionResult>;
   getUser(accessToken: string): Promise<AuthUserResult>;
   signOut(accessToken: string): Promise<AuthOperationResult>;
+  requestPasswordRecovery(email: string): Promise<AuthOperationResult>;
 }
 
 type AuthClient = Pick<
   SupabaseClient['auth'],
-  'signUp' | 'signInWithPassword' | 'refreshSession' | 'getUser'
+  | 'signUp'
+  | 'signInWithPassword'
+  | 'refreshSession'
+  | 'getUser'
+  | 'resetPasswordForEmail'
 > & {
   admin: Pick<SupabaseClient['auth']['admin'], 'signOut'>;
 };
 
 export class SupabaseAuthModel implements AuthModelPort {
-  constructor(private readonly createClient: () => AuthClient) {}
+  constructor(
+    private readonly createClient: () => AuthClient,
+    private readonly passwordResetRedirectUrl: string,
+  ) {}
 
   async signUp(input: SignUpInput): Promise<AuthSessionResult> {
     const credentials = {
@@ -111,6 +119,19 @@ export class SupabaseAuthModel implements AuthModelPort {
     const { error } = await this.createClient().admin.signOut(
       accessToken,
       'local',
+    );
+
+    return { error };
+  }
+
+  async requestPasswordRecovery(
+    email: string,
+  ): Promise<AuthOperationResult> {
+    const { error } = await this.createClient().resetPasswordForEmail(
+      email,
+      {
+        redirectTo: this.passwordResetRedirectUrl,
+      },
     );
 
     return { error };

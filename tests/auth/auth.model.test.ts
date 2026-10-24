@@ -13,14 +13,19 @@ function setup() {
       vi.fn<SupabaseClient['auth']['signInWithPassword']>(),
     refreshSession: vi.fn<SupabaseClient['auth']['refreshSession']>(),
     getUser: vi.fn<SupabaseClient['auth']['getUser']>(),
+    resetPasswordForEmail:
+      vi.fn<SupabaseClient['auth']['resetPasswordForEmail']>(),
     admin: {
-  signOut:
-    vi.fn<SupabaseClient['auth']['admin']['signOut']>(),
-},
+      signOut:
+        vi.fn<SupabaseClient['auth']['admin']['signOut']>(),
+    },
   };
 
   const createClient = vi.fn(() => client);
-  const model = new SupabaseAuthModel(createClient);
+  const model = new SupabaseAuthModel(
+    createClient,
+    'veronicalens://auth/reset-password',
+  );
 
   return { client, createClient, model };
 }
@@ -140,5 +145,24 @@ describe('SupabaseAuthModel', () => {
         password: 'test-password',
       }),
     ).rejects.toBe(failure);
+  });
+
+  it('uses the configured redirect for password recovery', async () => {
+    const { client, model } = setup();
+
+    client.resetPasswordForEmail.mockResolvedValue({
+      data: {},
+      error: null,
+    });
+
+    await expect(
+      model.requestPasswordRecovery('user@example.com'),
+    ).resolves.toEqual({ error: null });
+
+    expect(
+      client.resetPasswordForEmail,
+    ).toHaveBeenCalledExactlyOnceWith('user@example.com', {
+      redirectTo: 'veronicalens://auth/reset-password',
+    });
   });
 });

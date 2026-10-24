@@ -167,6 +167,42 @@ export const openApiDocument = {
         },
       },
     },
+
+    '/api/v1/auth/password/recovery': {
+      post: {
+        tags: ['Authentication'],
+        operationId: 'requestPasswordRecovery',
+        summary: 'Request password recovery instructions',
+        description:
+          'Returns a generic acknowledgement without confirming account existence. The redirect is configured by the server. This operation does not update the password.',
+        requestBody: requestBody('PasswordRecoveryInput'),
+        responses: {
+          '202': {
+            description: 'Recovery request accepted',
+            content: jsonContent({
+              type: 'object',
+              required: ['data'],
+              properties: {
+                data: {
+                  type: 'object',
+                  required: ['message'],
+                  properties: {
+                    message: {
+                      type: 'string',
+                      enum: [
+                        'If the account exists, password recovery instructions were sent.',
+                      ],
+                    },
+                  },
+                },
+              },
+            }),
+          },
+          ...commonAuthErrors,
+          '413': errorResponse('Request body exceeds 1 MB'),
+        },
+      },
+    },
   },
 
   components: {
@@ -241,6 +277,18 @@ export const openApiDocument = {
             format: 'password',
             minLength: 1,
             maxLength: 72,
+          },
+        },
+      },
+
+      PasswordRecoveryInput: {
+        type: 'object',
+        required: ['email'],
+        properties: {
+          email: {
+            type: 'string',
+            format: 'email',
+            maxLength: 254,
           },
         },
       },

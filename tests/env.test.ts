@@ -6,6 +6,7 @@ function validSource(): NodeJS.ProcessEnv {
   return {
     SUPABASE_URL: 'https://example.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'test-publishable-key',
+    PASSWORD_RESET_REDIRECT_URL:'veronicalens://auth/reset-password',
   };
 }
 
@@ -83,5 +84,14 @@ describe('loadEnv', () => {
     ).toThrow(
       'Configuracao de ambiente invalida. Verifique: NODE_ENV.',
     );
+  });
+
+  it('rejects an unapproved password recovery redirect', () => {
+    expect(() =>
+      loadEnv({
+        ...validSource(),
+        PASSWORD_RESET_REDIRECT_URL: 'https://untrusted.example/reset',
+      }),
+    ).toThrow(/PASSWORD_RESET_REDIRECT_URL/);
   });
 });

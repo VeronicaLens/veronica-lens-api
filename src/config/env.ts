@@ -17,6 +17,9 @@ const envSchema = z.object({
   )),
   SUPABASE_PUBLISHABLE_KEY: z.string().trim().min(1),
   SUPABASE_SECRET_KEY: z.string().trim().min(1).optional(),
+  PASSWORD_RESET_REDIRECT_URL: z.literal(
+    'veronicalens://auth/reset-password',
+  ),
 });
 
 export type Env = z.infer<typeof envSchema>;

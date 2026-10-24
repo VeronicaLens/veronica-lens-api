@@ -21,7 +21,7 @@ export const signUpSchema = z.object({
 
 export const signInSchema = z.object({
   email: emailSchema,
-  password: newPasswordSchema,
+  password: z.string().min(1).max(72),
 });
 
 export type SignUpInput = z.infer<typeof signUpSchema>;

@@ -40,6 +40,7 @@ describe('API documentation', () => {
       '/api/v1/conditions/forecast',
       '/api/v1/events',
       '/api/v1/events/{id}',
+      '/api/v1/health/connectivity',
       '/api/v1/learning/lessons/{id}',
       '/api/v1/learning/lessons/{id}/progress',
       '/api/v1/learning/tracks',

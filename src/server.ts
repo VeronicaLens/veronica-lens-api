@@ -19,6 +19,8 @@ import { ExpoPushClient } from './modules/notifications/expo-push.client.js';
 import { SupabaseDeviceModel } from './modules/notifications/notifications.model.js';
 import { SupabaseDispatchModel } from './modules/notifications/notifications.dispatch-model.js';
 import { NotificationsService } from './modules/notifications/notifications.service.js';
+import { SupabaseHealthProbe } from './modules/health/health.probe.js';
+import { HealthService } from './modules/health/health.service.js';
 import { SupabaseAvatarStorage } from './modules/profile/avatar.storage.js';
 import { SupabaseProfileModel } from './modules/profile/profile.model.js';
 import {
@@ -62,6 +64,7 @@ const app = createApp({
   observationsModel: new SupabaseObservationsModel(createClientForUser),
   notificationsService,
   notificationsDispatchSecret: env.NOTIFICATIONS_DISPATCH_SECRET,
+  healthService: new HealthService(new SupabaseHealthProbe(env.SUPABASE_URL)),
   corsOrigins: env.CORS_ORIGINS,
   httpsOnly: env.NODE_ENV === 'production',
 });

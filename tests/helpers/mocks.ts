@@ -10,6 +10,8 @@ import type { DispatchModelPort } from '../../src/modules/notifications/notifica
 import type { PushSender } from '../../src/modules/notifications/expo-push.client.js';
 import type { DeviceModelPort } from '../../src/modules/notifications/notifications.model.js';
 import { NotificationsService } from '../../src/modules/notifications/notifications.service.js';
+import type { ConnectivityProbe } from '../../src/modules/health/health.probe.js';
+import { HealthService } from '../../src/modules/health/health.service.js';
 import type { WeatherProviderPort } from '../../src/modules/weather/index.js';
 import type { AuthModelPort } from '../../src/modules/auth/auth.model.js';
 import { StaticCatalogModel } from '../../src/modules/catalog/catalog.model.js';
@@ -161,5 +163,15 @@ export function createAppMocks() {
       createDispatchModelMock(),
       createPushSenderMock(),
     ),
+    healthService: new HealthService(createConnectivityProbeMock()),
   };
+}
+
+export function createConnectivityProbeMock() {
+  return {
+    check: vi.fn<ConnectivityProbe['check']>().mockResolvedValue({
+      status: 'up',
+      latencyMs: 5,
+    }),
+  } satisfies ConnectivityProbe;
 }

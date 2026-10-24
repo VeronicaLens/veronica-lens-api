@@ -102,6 +102,64 @@ export const openApiDocument = {
       },
     },
 
+    '/api/v1/health/connectivity': {
+      get: {
+        tags: ['Health'],
+        operationId: 'getConnectivity',
+        summary: 'Check connectivity to Supabase',
+        description:
+          'Calls Supabase Auth health with a 3 second timeout. Returns no URLs or error details.',
+        responses: {
+          '200': {
+            description: 'Supabase is reachable',
+            content: jsonContent({
+              type: 'object',
+              required: ['data'],
+              properties: {
+                data: {
+                  type: 'object',
+                  required: ['status', 'checks', 'timestamp'],
+                  properties: {
+                    status: { type: 'string', enum: ['ok'] },
+                    checks: {
+                      type: 'object',
+                      properties: {
+                        supabase: { $ref: '#/components/schemas/ProbeResult' },
+                      },
+                    },
+                    timestamp: { type: 'string', format: 'date-time' },
+                  },
+                },
+              },
+            }),
+          },
+          '503': {
+            description: 'Supabase is unreachable',
+            content: jsonContent({
+              type: 'object',
+              required: ['data'],
+              properties: {
+                data: {
+                  type: 'object',
+                  required: ['status', 'checks', 'timestamp'],
+                  properties: {
+                    status: { type: 'string', enum: ['degraded'] },
+                    checks: {
+                      type: 'object',
+                      properties: {
+                        supabase: { $ref: '#/components/schemas/ProbeResult' },
+                      },
+                    },
+                    timestamp: { type: 'string', format: 'date-time' },
+                  },
+                },
+              },
+            }),
+          },
+        },
+      },
+    },
+
     '/api/v1/auth/sign-up': {
       post: {
         tags: ['Authentication'],
@@ -1103,6 +1161,15 @@ export const openApiDocument = {
           status: { type: 'string', enum: ['ok'] },
           uptime: { type: 'number', minimum: 0 },
           timestamp: { type: 'string', format: 'date-time' },
+        },
+      },
+
+      ProbeResult: {
+        type: 'object',
+        required: ['status', 'latencyMs'],
+        properties: {
+          status: { type: 'string', enum: ['up', 'down'] },
+          latencyMs: { type: 'integer', minimum: 0 },
         },
       },
 

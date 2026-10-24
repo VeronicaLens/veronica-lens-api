@@ -147,6 +147,26 @@ export const openApiDocument = {
         },
       },
     },
+
+    '/api/v1/auth/sign-out': {
+      post: {
+        tags: ['Authentication'],
+        operationId: 'signOut',
+        summary: 'Sign out from the current session',
+        description:
+          'Revokes refresh tokens for the current session only. Other sessions are not affected. Issued access tokens can remain valid until expiration. The application must also clear its local session.',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '204': {
+            description: 'Current session signed out; no response body',
+          },
+          '401': errorResponse('Missing, invalid or expired token'),
+          '500': errorResponse('Unexpected server error'),
+          '502': errorResponse('Unexpected authentication provider response'),
+          '503': errorResponse('Authentication provider unavailable'),
+        },
+      },
+    },
   },
 
   components: {

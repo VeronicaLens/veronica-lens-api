@@ -22,17 +22,24 @@ export interface AuthUserResult {
   error: AuthError | null;
 }
 
+export interface AuthOperationResult {
+  error: AuthError | null;
+}
+
 export interface AuthModelPort {
   signUp(input: SignUpInput): Promise<AuthSessionResult>;
   signIn(input: SignInInput): Promise<AuthSessionResult>;
   refresh(input: RefreshSessionInput): Promise<AuthSessionResult>;
   getUser(accessToken: string): Promise<AuthUserResult>;
+  signOut(accessToken: string): Promise<AuthOperationResult>;
 }
 
 type AuthClient = Pick<
   SupabaseClient['auth'],
   'signUp' | 'signInWithPassword' | 'refreshSession' | 'getUser'
->;
+> & {
+  admin: Pick<SupabaseClient['auth']['admin'], 'signOut'>;
+};
 
 export class SupabaseAuthModel implements AuthModelPort {
   constructor(private readonly createClient: () => AuthClient) {}
@@ -98,5 +105,14 @@ export class SupabaseAuthModel implements AuthModelPort {
       user: data.user,
       error,
     };
+  }
+
+  async signOut(accessToken: string): Promise<AuthOperationResult> {
+    const { error } = await this.createClient().admin.signOut(
+      accessToken,
+      'local',
+    );
+
+    return { error };
   }
 }

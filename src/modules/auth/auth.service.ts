@@ -250,4 +250,24 @@ export class AuthService {
 
     return toPublicUser(result.user);
   }
+
+  async signOut(accessToken: string): Promise<void> {
+    const result = await this.model.signOut(accessToken);
+
+    if (result.error) {
+      if (
+        result.error.status === 401 ||
+        result.error.status === 403 ||
+        result.error.code === 'bad_jwt'
+      ) {
+        throw new AppError(
+          401,
+          'AUTH_TOKEN_INVALID',
+          'Authentication token is invalid or expired',
+        );
+      }
+
+      throwAuthError(result.error);
+    }
+  }
 }

@@ -53,4 +53,18 @@ export class AuthController {
       },
     });
   };
+
+  signOut = async (req: Request, res: Response): Promise<void> => {
+    if (!req.auth) {
+      throw new AppError(
+        401,
+        'AUTH_REQUIRED',
+        'Authentication is required',
+      );
+    }
+
+    await this.service.signOut(req.auth.accessToken);
+
+    res.status(204).send();
+  };
 }

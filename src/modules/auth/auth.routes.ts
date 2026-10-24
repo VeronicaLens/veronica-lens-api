@@ -16,6 +16,7 @@ export function createAuthRouter(model: AuthModelPort): Router {
   router.post('/sign-up', limiter, controller.signUp);
   router.post('/sign-in', limiter, controller.signIn);
   router.post('/refresh', limiter, controller.refresh);
+  router.post('/sign-out', authenticate, controller.signOut);
 
   router.get('/me', authenticate, controller.me);
 

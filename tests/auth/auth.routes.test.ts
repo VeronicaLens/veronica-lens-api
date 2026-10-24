@@ -37,6 +37,7 @@ function setup() {
     signIn: vi.fn<AuthModelPort['signIn']>(),
     refresh: vi.fn<AuthModelPort['refresh']>(),
     getUser: vi.fn<AuthModelPort['getUser']>(),
+    signOut: vi.fn<AuthModelPort['signOut']>(),
   };
 
   return {

@@ -10,6 +10,7 @@ function setup() {
     signIn: vi.fn<AuthModelPort['signIn']>(),
     refresh: vi.fn<AuthModelPort['refresh']>(),
     getUser: vi.fn<AuthModelPort['getUser']>(),
+    signOut: vi.fn<AuthModelPort['signOut']>(),
   };
 
   return {
@@ -34,6 +35,7 @@ describe('API documentation', () => {
       '/api/v1/auth/refresh',
       '/api/v1/auth/sign-in',
       '/api/v1/auth/sign-up',
+      '/api/v1/auth/sign-out',
       '/health',
     ]);
 
@@ -45,6 +47,9 @@ describe('API documentation', () => {
     expect(model.signIn).not.toHaveBeenCalled();
     expect(model.refresh).not.toHaveBeenCalled();
     expect(model.getUser).not.toHaveBeenCalled();
+    expect(
+      response.body.paths['/api/v1/auth/sign-out'].post.security,
+    ).toEqual([{ bearerAuth: [] }]);
   });
 
   it('serves the Swagger UI page', async () => {

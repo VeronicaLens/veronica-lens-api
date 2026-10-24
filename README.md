@@ -29,13 +29,14 @@ reais antes de iniciar o servidor. Nunca versione o arquivo local ou credenciais
 
 ### Variaveis de ambiente
 
-| Variavel | Obrigatoria | Padrao | Descricao |
-| --- | --- | --- | --- |
-| `NODE_ENV` | Nao | `development` | `development`, `test` ou `production` |
-| `PORT` | Nao | `3000` | Inteiro de 1 a 65535 |
-| `SUPABASE_URL` | Sim | Nenhum | URL HTTP ou HTTPS do projeto Supabase |
-| `SUPABASE_PUBLISHABLE_KEY` | Sim | Nenhum | Chave publica usada pelos clientes de autenticacao e usuario |
-| `SUPABASE_SECRET_KEY` | Nao | Nenhum | Chave exclusiva de futuras operacoes administrativas |
+
+| Variavel                   | Obrigatoria | Padrao        | Descricao                                                    |
+| ---------------------------- | ------------- | --------------- | -------------------------------------------------------------- |
+| `NODE_ENV`                 | Nao         | `development` | `development`, `test` ou `production`                        |
+| `PORT`                     | Nao         | `3000`        | Inteiro de 1 a 65535                                         |
+| `SUPABASE_URL`             | Sim         | Nenhum        | URL HTTP ou HTTPS do projeto Supabase                        |
+| `SUPABASE_PUBLISHABLE_KEY` | Sim         | Nenhum        | Chave publica usada pelos clientes de autenticacao e usuario |
+| `SUPABASE_SECRET_KEY`      | Nao         | Nenhum        | Chave exclusiva de futuras operacoes administrativas         |
 
 A configuracao e validada antes de abrir a porta. Erros indicam os campos
 invalidos sem imprimir seus valores. A criacao do cliente nao verifica
@@ -48,14 +49,15 @@ que exigem essas credenciais; os testes atuais nao precisam delas.
 
 ## Scripts
 
-| Comando | Funcao |
-| --- | --- |
-| `npm run dev` | Executa a API com recarga automatica |
-| `npm run typecheck` | Verifica tipos da aplicacao e dos testes |
-| `npm test` | Executa todos os testes uma vez |
-| `npm run test:watch` | Executa os testes em modo de observacao |
-| `npm run build` | Compila a aplicacao para `dist/` |
-| `npm start` | Executa a aplicacao compilada |
+
+| Comando              | Funcao                                   |
+| ---------------------- | ------------------------------------------ |
+| `npm run dev`        | Executa a API com recarga automatica     |
+| `npm run typecheck`  | Verifica tipos da aplicacao e dos testes |
+| `npm test`           | Executa todos os testes uma vez          |
+| `npm run test:watch` | Executa os testes em modo de observacao  |
+| `npm run build`      | Compila a aplicacao para `dist/`         |
+| `npm start`          | Executa a aplicacao compilada            |
 
 Para validar e executar a versao compilada:
 
@@ -145,6 +147,13 @@ Uma falha de rede ou indisponibilidade do provedor nao comprova revogacao.
 Os contratos completos de entrada, resposta e status HTTP estao no Swagger.
 Nao envie objetos completos do SDK ao aplicativo nem use metadados editaveis
 pelo usuario para atribuir privilegios administrativos.
+
+O logout encerra somente a sessao atual no provedor. Outras sessoes
+permanecem ativas. Access tokens emitidos podem continuar validos ate
+expirar; o aplicativo deve remover os tokens locais ao sair.
+
+Se a revogacao remota falhar, a API retorna erro. Apagar os tokens locais
+nao comprova que a sessao foi revogada no provedor.
 
 ## Erros e logs
 

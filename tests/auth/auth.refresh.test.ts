@@ -18,6 +18,7 @@ function setup() {
     signIn: vi.fn<AuthModelPort['signIn']>(),
     refresh: vi.fn<AuthModelPort['refresh']>(),
     getUser: vi.fn<AuthModelPort['getUser']>(),
+    signOut: vi.fn<AuthModelPort['signOut']>(),
   };
 
   return {
@@ -55,6 +56,10 @@ describe('Session refresh', () => {
       refreshSession:
         vi.fn<SupabaseClient['auth']['refreshSession']>(),
       getUser: vi.fn<SupabaseClient['auth']['getUser']>(),
+      admin: {
+        signOut:
+          vi.fn<SupabaseClient['auth']['admin']['signOut']>(),
+      },
     };
 
     client.refreshSession.mockResolvedValue({

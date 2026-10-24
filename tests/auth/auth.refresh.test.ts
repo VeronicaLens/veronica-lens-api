@@ -8,17 +8,14 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { createApp } from '../../src/app.js';
 import { SupabaseAuthModel } from '../../src/modules/auth/auth.model.js';
-import { createAuthModelMock, createProfileModelMock } from '../helpers/mocks.js';
+import { createAppMocks, createAuthModelMock } from '../helpers/mocks.js';
 
 function setup() {
   const model = createAuthModelMock();
 
   return {
     model,
-    app: createApp({
-      authModel: model,
-      profileModel: createProfileModelMock(),
-    }),
+    app: createApp({ ...createAppMocks(), authModel: model }),
   };
 }
 

@@ -19,6 +19,7 @@ export interface ProfileRow {
 
 export interface ProfileChanges {
   display_name?: string | null;
+  avatar_url?: string | null;
   location_name?: string | null;
   latitude?: number | null;
   longitude?: number | null;

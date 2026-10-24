@@ -2,14 +2,14 @@ import request from 'supertest';
 import { describe, expect, it, vi } from 'vitest';
 
 import { createApp } from '../src/app.js';
-import { createAuthModelMock, createProfileModelMock } from './helpers/mocks.js';
+import { createAppMocks, createAuthModelMock } from './helpers/mocks.js';
 
 function setup(corsOrigins?: readonly string[], httpsOnly?: boolean) {
   const authModel = createAuthModelMock();
 
   return createApp({
+    ...createAppMocks(),
     authModel,
-    profileModel: createProfileModelMock(),
     corsOrigins,
     httpsOnly,
   });

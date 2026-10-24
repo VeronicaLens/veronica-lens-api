@@ -6,9 +6,9 @@ logs estruturados e documentacao HTTP interativa.
 O projeto esta sendo reconstruido incrementalmente. Atualmente implementa
 cadastro, login, renovacao de sessao, consulta do usuario autenticado, logout
 da sessao atual, solicitacao de recuperacao de senha por email, atualizacao
-da senha com a sessao do proprio usuario e consulta/edicao do proprio perfil.
-Upload de avatar, exclusao de conta e os demais dominios ainda nao estao
-implementados.
+da senha com a sessao do proprio usuario, consulta/edicao do proprio perfil e
+upload/remocao de avatar.
+Exclusao de conta e os demais dominios ainda nao estao implementados.
 
 ## Requisitos
 
@@ -124,7 +124,9 @@ tests/
 ```
 
 Ao adicionar um metodo a um `ModelPort`, atualize o mock correspondente em
-`tests/helpers/mocks.ts`; os testes reutilizam esses mocks.
+`tests/helpers/mocks.ts`. Ao adicionar uma dependencia ao `createApp`, inclua
+seu mock em `createAppMocks()`; os testes usam
+`createApp({ ...createAppMocks(), authModel })` e sobrescrevem so o que usam.
 
 Fluxo principal:
 
@@ -211,8 +213,29 @@ acesso ao proprio perfil. O schema e as policies ficam em
 
 O `PATCH` aceita somente os campos enviados e rejeita campos desconhecidos.
 Latitude e longitude vao juntas, ambas numeros ou ambas `null`, como exige a
-constraint do banco. O avatar nao e editavel por essa rota; sera definido por
-upload em etapa futura, para impedir URLs externas arbitrarias.
+constraint do banco. O avatar nao e editavel por essa rota, para impedir URLs
+externas arbitrarias.
+
+### Avatar
+
+`PUT /api/v1/profile/avatar` recebe os bytes da imagem no corpo, com
+`Content-Type` `image/jpeg`, `image/png` ou `image/webp`, ate 5 MB (o limite do
+bucket `avatars`). A API confere a assinatura real do arquivo contra o tipo
+declarado; um SVG ou HTML enviado como `image/png` e rejeitado.
+
+O arquivo fica em `avatars/<user_id>/avatar` e e sobrescrito a cada envio.
+O upload usa o JWT do usuario; as policies de Storage so permitem escrita na
+pasta do proprio usuario. A URL publica gravada no perfil recebe `?v=<timestamp>`
+para invalidar caches. O bucket e de leitura publica: nao envie imagens que
+nao devam ser publicas.
+
+`DELETE /api/v1/profile/avatar` remove o arquivo, inclusive os nomes antigos
+`avatar.jpg|png|webp` da API anterior, e limpa `avatarUrl`. Se o Storage falhar,
+o perfil nao e alterado. Se o perfil falhar depois do upload, o arquivo novo
+ja estara gravado e um novo envio corrige a URL.
+
+O app deve enviar imagens ja redimensionadas; a API nao processa nem
+redimensiona imagens.
 
 O perfil e criado por trigger no cadastro. Se nao for encontrado ou nao estiver
 visivel para o usuario, a API retorna `404 PROFILE_NOT_FOUND`.

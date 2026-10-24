@@ -254,7 +254,7 @@ export const openApiDocument = {
         operationId: 'updateProfile',
         summary: 'Update the authenticated user profile',
         description:
-          'Send only the fields to change. Latitude and longitude must be sent together, both numbers or both null. The avatar is not editable here.',
+        'Send only the fields to change. Latitude and longitude must be sent together, both numbers or both null. Use the avatar endpoints to change the avatar.',
         security: [{ bearerAuth: [] }],
         requestBody: requestBody('UpdateProfileInput'),
         responses: {
@@ -262,6 +262,45 @@ export const openApiDocument = {
           '400': errorResponse('Invalid input or rejected values'),
           '413': errorResponse('Request body exceeds 1 MB'),
           ...profileErrors,
+        },
+      },
+    },
+
+    '/api/v1/profile/avatar': {
+      put: {
+        tags: ['Profile'],
+        operationId: 'uploadAvatar',
+        summary: 'Upload or replace the avatar image',
+        description:
+          'Send the raw image bytes with the matching Content-Type (JPEG, PNG or WebP, up to 5 MB). The content is checked against the declared type. The stored URL changes on every upload.',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: Object.fromEntries(
+            ['image/jpeg', 'image/png', 'image/webp'].map((type) => [
+              type,
+              { schema: { type: 'string', format: 'binary' } },
+            ]),
+          ),
+        },
+        responses: {
+          '200': dataResponse('Profile with the new avatar', 'ProfileResult'),
+          '400': errorResponse('Empty file or content does not match the type'),
+          '413': errorResponse('Avatar exceeds 5 MB'),
+          '415': errorResponse('Unsupported image type'),
+          ...profileErrors,
+          '503': errorResponse('Profile, storage or authentication service unavailable'),
+        },
+      },
+      delete: {
+        tags: ['Profile'],
+        operationId: 'removeAvatar',
+        summary: 'Remove the avatar image',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': dataResponse('Profile without avatar', 'ProfileResult'),
+          ...profileErrors,
+          '503': errorResponse('Profile, storage or authentication service unavailable'),
         },
       },
     },

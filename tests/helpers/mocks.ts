@@ -1,6 +1,7 @@
 import { vi } from 'vitest';
 
 import type { AuthModelPort } from '../../src/modules/auth/auth.model.js';
+import type { AvatarStoragePort } from '../../src/modules/profile/avatar.storage.js';
 import type { ProfileModelPort } from '../../src/modules/profile/profile.model.js';
 
 export function createAuthModelMock() {
@@ -21,4 +22,20 @@ export function createProfileModelMock() {
     findById: vi.fn<ProfileModelPort['findById']>(),
     update: vi.fn<ProfileModelPort['update']>(),
   } satisfies ProfileModelPort;
+}
+
+export function createAvatarStorageMock() {
+  return {
+    upload: vi.fn<AvatarStoragePort['upload']>(),
+    remove: vi.fn<AvatarStoragePort['remove']>(),
+  } satisfies AvatarStoragePort;
+}
+
+// Every dependency required by createApp; override only what a test uses.
+export function createAppMocks() {
+  return {
+    authModel: createAuthModelMock(),
+    profileModel: createProfileModelMock(),
+    avatarStorage: createAvatarStorageMock(),
+  };
 }

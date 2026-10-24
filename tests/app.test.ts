@@ -2,12 +2,12 @@ import request from 'supertest';
 import { describe, expect, it, vi } from 'vitest';
 
 import { createApp as createApplication } from '../src/app.js';
-import { createAuthModelMock, createProfileModelMock } from './helpers/mocks.js';
+import { createAppMocks, createAuthModelMock } from './helpers/mocks.js';
 
 function createApp() {
   const authModel = createAuthModelMock();
 
-  return createApplication({ authModel, profileModel: createProfileModelMock() });
+  return createApplication({ ...createAppMocks(), authModel });
 }
 
 const uuidPattern =

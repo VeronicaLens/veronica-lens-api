@@ -5,7 +5,8 @@ import { describe, expect, it } from 'vitest';
 import { createApp } from '../../src/app.js';
 import type { ProfileRow } from '../../src/modules/profile/profile.model.js';
 import {
-  createAuthModelMock,
+  createAppMocks,
+  createAvatarStorageMock,
   createProfileModelMock,
 } from '../helpers/mocks.js';
 
@@ -52,15 +53,20 @@ function postgrestError(code: string): PostgrestError {
 }
 
 function setup() {
-  const authModel = createAuthModelMock();
+  const mocks = createAppMocks();
   const profileModel = createProfileModelMock();
+  const avatarStorage = createAvatarStorageMock();
 
-  authModel.getUser.mockResolvedValue({ user: createUser(), error: null });
+  mocks.authModel.getUser.mockResolvedValue({
+    user: createUser(),
+    error: null,
+  });
 
   return {
-    authModel,
+    authModel: mocks.authModel,
     profileModel,
-    app: createApp({ authModel, profileModel }),
+    avatarStorage,
+    app: createApp({ ...mocks, profileModel, avatarStorage }),
   };
 }
 

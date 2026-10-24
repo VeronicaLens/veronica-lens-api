@@ -2,6 +2,7 @@ import { createApp } from './app.js';
 import { loadEnv } from './config/env.js';
 import { createAuthClient, createUserClient } from './config/supabase.js';
 import { SupabaseAuthModel } from './modules/auth/auth.model.js';
+import { SupabaseAvatarStorage } from './modules/profile/avatar.storage.js';
 import { SupabaseProfileModel } from './modules/profile/profile.model.js';
 import { logger } from './shared/logging/logger.js';
 
@@ -12,13 +13,16 @@ const authModel = new SupabaseAuthModel(
   env.PASSWORD_RESET_REDIRECT_URL,
 );
 
-const profileModel = new SupabaseProfileModel((accessToken) =>
-  createUserClient(env, accessToken),
-);
+const createClientForUser = (accessToken: string) =>
+  createUserClient(env, accessToken);
+
+const profileModel = new SupabaseProfileModel(createClientForUser);
+const avatarStorage = new SupabaseAvatarStorage(createClientForUser);
 
 const app = createApp({
   authModel,
   profileModel,
+  avatarStorage,
   corsOrigins: env.CORS_ORIGINS,
   httpsOnly: env.NODE_ENV === 'production',
 });

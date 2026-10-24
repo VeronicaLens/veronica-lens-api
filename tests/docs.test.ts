@@ -2,17 +2,14 @@ import request from 'supertest';
 import { describe, expect, it, vi } from 'vitest';
 
 import { createApp } from '../src/app.js';
-import { createAuthModelMock, createProfileModelMock } from './helpers/mocks.js';
+import { createAppMocks, createAuthModelMock } from './helpers/mocks.js';
 
 function setup() {
   const model = createAuthModelMock();
 
   return {
     model,
-    app: createApp({
-      authModel: model,
-      profileModel: createProfileModelMock(),
-    }),
+    app: createApp({ ...createAppMocks(), authModel: model }),
   };
 }
 
@@ -36,6 +33,7 @@ describe('API documentation', () => {
       '/api/v1/auth/sign-out',
       '/api/v1/auth/sign-up',
       '/api/v1/profile',
+      '/api/v1/profile/avatar',
       '/health',
     ]);
 
@@ -140,6 +138,14 @@ describe('API documentation', () => {
     expect(input.properties.avatarUrl).toBeUndefined();
     expect(Object.keys(path.patch.responses).sort()).toEqual([
       '200', '400', '401', '404', '413', '500', '502', '503',
+    ]);
+
+    const avatar = response.body.paths['/api/v1/profile/avatar'];
+
+    expect(avatar.put.security).toEqual([{ bearerAuth: [] }]);
+    expect(avatar.delete.security).toEqual([{ bearerAuth: [] }]);
+    expect(Object.keys(avatar.put.requestBody.content).sort()).toEqual([
+      'image/jpeg', 'image/png', 'image/webp',
     ]);
   });
 

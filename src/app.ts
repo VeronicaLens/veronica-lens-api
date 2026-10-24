@@ -4,6 +4,7 @@ import type { AuthModelPort } from './modules/auth/auth.model.js';
 import { createAuthRouter } from './modules/auth/auth.routes.js';
 import { AuthService } from './modules/auth/auth.service.js';
 import type { ProfileModelPort } from './modules/profile/profile.model.js';
+import type { AvatarStoragePort } from './modules/profile/avatar.storage.js';
 import { createProfileRouter } from './modules/profile/profile.routes.js';
 import { createAuthenticateMiddleware } from './shared/auth/authenticate.middleware.js';
 import { errorHandler } from './shared/http/error-handler.js';
@@ -18,6 +19,7 @@ import { createDocsRouter } from './docs/docs.routes.js';
 interface AppOptions {
   authModel: AuthModelPort;
   profileModel: ProfileModelPort;
+  avatarStorage: AvatarStoragePort;
   corsOrigins?: readonly string[];
   httpsOnly?: boolean;
 }
@@ -45,7 +47,11 @@ export function createApp(options: AppOptions) {
   app.use('/api/v1/auth', createAuthRouter(options.authModel));
   app.use(
     '/api/v1/profile',
-    createProfileRouter(options.profileModel, authenticate),
+    createProfileRouter(
+      options.profileModel,
+      options.avatarStorage,
+      authenticate,
+    ),
   );
   app.use(createDocsRouter());
 

@@ -9,7 +9,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createApp } from '../../src/app.js';
 import { SupabaseAuthModel } from '../../src/modules/auth/auth.model.js';
-import { createAuthModelMock, createProfileModelMock } from '../helpers/mocks.js';
+import { createAppMocks, createAuthModelMock } from '../helpers/mocks.js';
 
 const userId = '00000000-0000-4000-8000-000000000001';
 const endpoint = '/api/v1/auth/password';
@@ -53,10 +53,7 @@ function setupHttp() {
 
   return {
     model,
-    app: createApp({
-      authModel: model,
-      profileModel: createProfileModelMock(),
-    }),
+    app: createApp({ ...createAppMocks(), authModel: model }),
   };
 }
 

@@ -7,7 +7,7 @@ import request from 'supertest';
 import { describe, expect, it, vi } from 'vitest';
 
 import { createApp } from '../../src/app.js';
-import { createAuthModelMock, createProfileModelMock } from '../helpers/mocks.js';
+import { createAppMocks, createAuthModelMock } from '../helpers/mocks.js';
 
 function createUser(): User {
   return {
@@ -36,10 +36,7 @@ function setup() {
 
   return {
     model,
-    app: createApp({
-      authModel: model,
-      profileModel: createProfileModelMock(),
-    }),
+    app: createApp({ ...createAppMocks(), authModel: model }),
   };
 }
 

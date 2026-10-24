@@ -254,6 +254,21 @@ rotacao real de tokens, conectividade, grants ou RLS.
 Os testes da documentacao tambem nao substituem validacao de todas as respostas
 reais contra o contrato OpenAPI.
 
+Os testes nao precisam de `.env` nem de credenciais do Supabase.
+Migrations e testes de banco (RLS, grants) ficam no repositorio
+`veronica-lens-database`.
+
+## CI/CD
+
+- `.github/workflows/ci.yml`: em pushes para `dev` e pull requests para `dev`,
+  `qual` e `main`, executa `npm ci`, `typecheck`, `test` e `build`.
+- `.github/workflows/deploy.yml`: em pushes para `qual` e `main`, reaproveita a
+  CI e, se ela passar, aciona o deploy hook do Render do ambiente
+  correspondente (`qa` ou `production`).
+
+O deploy usa o secret `RENDER_DEPLOY_HOOK_URL` e a variable `RENDER_SERVICE_URL`
+de cada GitHub Environment. As variaveis de ambiente da API ficam no Render.
+
 ## Antes de disponibilizar publicamente
 
 - Usar HTTPS.

@@ -8,10 +8,8 @@ import request from 'supertest';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createApp } from '../../src/app.js';
-import {
-  SupabaseAuthModel,
-  type AuthModelPort,
-} from '../../src/modules/auth/auth.model.js';
+import { SupabaseAuthModel } from '../../src/modules/auth/auth.model.js';
+import { createAuthModelMock, createProfileModelMock } from '../helpers/mocks.js';
 
 const userId = '00000000-0000-4000-8000-000000000001';
 const endpoint = '/api/v1/auth/password';
@@ -46,16 +44,7 @@ function createSession(
 }
 
 function setupHttp() {
-  const model = {
-    signUp: vi.fn<AuthModelPort['signUp']>(),
-    signIn: vi.fn<AuthModelPort['signIn']>(),
-    refresh: vi.fn<AuthModelPort['refresh']>(),
-    getUser: vi.fn<AuthModelPort['getUser']>(),
-    signOut: vi.fn<AuthModelPort['signOut']>(),
-    requestPasswordRecovery:
-      vi.fn<AuthModelPort['requestPasswordRecovery']>(),
-    updatePassword: vi.fn<AuthModelPort['updatePassword']>(),
-  };
+  const model = createAuthModelMock();
 
   model.getUser.mockResolvedValue({
     user: createUser(),
@@ -64,7 +53,10 @@ function setupHttp() {
 
   return {
     model,
-    app: createApp({ authModel: model }),
+    app: createApp({
+      authModel: model,
+      profileModel: createProfileModelMock(),
+    }),
   };
 }
 

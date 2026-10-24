@@ -5,9 +5,9 @@ logs estruturados e documentacao HTTP interativa.
 
 O projeto esta sendo reconstruido incrementalmente. Atualmente implementa
 cadastro, login, renovacao de sessao, consulta do usuario autenticado, logout
-da sessao atual, solicitacao de recuperacao de senha por email e atualizacao
-da senha com a sessao do proprio usuario.
-O recebimento do link no mobile e os demais dominios ainda nao estao
+da sessao atual, solicitacao de recuperacao de senha por email, atualizacao
+da senha com a sessao do proprio usuario e consulta/edicao do proprio perfil.
+Upload de avatar, exclusao de conta e os demais dominios ainda nao estao
 implementados.
 
 ## Requisitos
@@ -111,14 +111,20 @@ src/
   docs/                  # Contrato OpenAPI e Swagger UI
   modules/
     auth/                # Schemas, rotas, controller, service e model
+    profile/             # Perfil do usuario autenticado
   shared/
-    auth/                # Middleware e contexto autenticado
+    auth/                # Middleware, contexto autenticado e requireAuth
     errors/              # Erros da aplicacao
-    http/                # Parser, logs HTTP e tratamento de erros
+    http/                # Parser, logs HTTP, seguranca e tratamento de erros
     logging/             # Logger compartilhado
 tests/
+  helpers/               # Mocks tipados compartilhados dos models
   auth/                  # Testes do modulo de autenticacao
+  profile/               # Testes do modulo de perfil
 ```
+
+Ao adicionar um metodo a um `ModelPort`, atualize o mock correspondente em
+`tests/helpers/mocks.ts`; os testes reutilizam esses mocks.
 
 Fluxo principal:
 
@@ -194,6 +200,24 @@ renovar a sessao e repetir a operacao.
 A resposta retorna somente o usuario publico. Confira no painel Supabase se
 outras sessoes sao encerradas apos a troca; a API nao revoga sessoes por conta
 propria nesta etapa.
+
+## Perfil
+
+`GET /api/v1/profile` e `PATCH /api/v1/profile` exigem bearer token. A API
+consulta a tabela `profiles` com um cliente Supabase criado com o JWT do
+usuario, sem a chave administrativa; as policies de RLS do banco limitam o
+acesso ao proprio perfil. O schema e as policies ficam em
+`veronica-lens-database`.
+
+O `PATCH` aceita somente os campos enviados e rejeita campos desconhecidos.
+Latitude e longitude vao juntas, ambas numeros ou ambas `null`, como exige a
+constraint do banco. O avatar nao e editavel por essa rota; sera definido por
+upload em etapa futura, para impedir URLs externas arbitrarias.
+
+O perfil e criado por trigger no cadastro. Se nao for encontrado ou nao estiver
+visivel para o usuario, a API retorna `404 PROFILE_NOT_FOUND`.
+Os testes usam mocks e nao verificam as policies de RLS; essa verificacao fica
+nos testes pgTAP do repositorio do banco.
 
 ## Headers de seguranca e CORS
 

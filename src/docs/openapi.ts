@@ -43,6 +43,14 @@ const commonAuthErrors = {
   '503': errorResponse('Authentication provider unavailable'),
 };
 
+const profileErrors = {
+  '401': errorResponse('Missing, invalid or expired token'),
+  '404': errorResponse('Profile not found'),
+  '500': errorResponse('Unexpected server error'),
+  '502': errorResponse('Invalid provider response'),
+  '503': errorResponse('Profile or authentication service unavailable'),
+};
+
 export const openApiDocument = {
   openapi: '3.0.3',
 
@@ -50,7 +58,7 @@ export const openApiDocument = {
     title: 'Veronica Lens API',
     version: '1.0.0',
     description:
-      'Authentication API. Never share credentials or tokens entered in this interface.',
+      'Veronica Lens API. Never share credentials or tokens entered in this interface.',
   },
 
   servers: [{ url: '/' }],
@@ -58,6 +66,7 @@ export const openApiDocument = {
   tags: [
     { name: 'Health' },
     { name: 'Authentication' },
+    { name: 'Profile' },
   ],
 
   paths: {
@@ -228,6 +237,34 @@ export const openApiDocument = {
         },
       },
     },
+
+    '/api/v1/profile': {
+      get: {
+        tags: ['Profile'],
+        operationId: 'getProfile',
+        summary: 'Get the authenticated user profile',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': dataResponse('Profile of the authenticated user', 'ProfileResult'),
+          ...profileErrors,
+        },
+      },
+      patch: {
+        tags: ['Profile'],
+        operationId: 'updateProfile',
+        summary: 'Update the authenticated user profile',
+        description:
+          'Send only the fields to change. Latitude and longitude must be sent together, both numbers or both null. The avatar is not editable here.',
+        security: [{ bearerAuth: [] }],
+        requestBody: requestBody('UpdateProfileInput'),
+        responses: {
+          '200': dataResponse('Updated profile', 'ProfileResult'),
+          '400': errorResponse('Invalid input or rejected values'),
+          '413': errorResponse('Request body exceeds 1 MB'),
+          ...profileErrors,
+        },
+      },
+    },
   },
 
   components: {
@@ -395,6 +432,79 @@ export const openApiDocument = {
         required: ['user'],
         properties: {
           user: ref('PublicUser'),
+        },
+      },
+
+      Profile: {
+        type: 'object',
+        required: [
+          'id',
+          'displayName',
+          'avatarUrl',
+          'locationName',
+          'latitude',
+          'longitude',
+          'notificationsEnabled',
+          'measurementUnit',
+          'language',
+          'createdAt',
+          'updatedAt',
+        ],
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          displayName: { type: 'string', nullable: true },
+          avatarUrl: { type: 'string', format: 'uri', nullable: true },
+          locationName: { type: 'string', nullable: true },
+          latitude: { type: 'number', nullable: true },
+          longitude: { type: 'number', nullable: true },
+          notificationsEnabled: { type: 'boolean' },
+          measurementUnit: { type: 'string', enum: ['metric', 'imperial'] },
+          language: { type: 'string', enum: ['pt-BR', 'en'] },
+          createdAt: { type: 'string', format: 'date-time' },
+          updatedAt: { type: 'string', format: 'date-time' },
+        },
+      },
+
+      ProfileResult: {
+        type: 'object',
+        required: ['profile'],
+        properties: {
+          profile: ref('Profile'),
+        },
+      },
+
+      UpdateProfileInput: {
+        type: 'object',
+        additionalProperties: false,
+        minProperties: 1,
+        properties: {
+          displayName: {
+            type: 'string',
+            minLength: 1,
+            maxLength: 100,
+            nullable: true,
+          },
+          locationName: {
+            type: 'string',
+            minLength: 1,
+            maxLength: 120,
+            nullable: true,
+          },
+          latitude: {
+            type: 'number',
+            minimum: -90,
+            maximum: 90,
+            nullable: true,
+          },
+          longitude: {
+            type: 'number',
+            minimum: -180,
+            maximum: 180,
+            nullable: true,
+          },
+          notificationsEnabled: { type: 'boolean' },
+          measurementUnit: { type: 'string', enum: ['metric', 'imperial'] },
+          language: { type: 'string', enum: ['pt-BR', 'en'] },
         },
       },
     },

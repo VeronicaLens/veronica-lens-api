@@ -7,10 +7,8 @@ import request from 'supertest';
 import { describe, expect, it, vi } from 'vitest';
 
 import { createApp } from '../../src/app.js';
-import {
-  SupabaseAuthModel,
-  type AuthModelPort,
-} from '../../src/modules/auth/auth.model.js';
+import { SupabaseAuthModel } from '../../src/modules/auth/auth.model.js';
+import { createAuthModelMock, createProfileModelMock } from '../helpers/mocks.js';
 
 function createUser(): User {
   return {
@@ -24,16 +22,7 @@ function createUser(): User {
 }
 
 function setup() {
-  const model = {
-    signUp: vi.fn<AuthModelPort['signUp']>(),
-    signIn: vi.fn<AuthModelPort['signIn']>(),
-    refresh: vi.fn<AuthModelPort['refresh']>(),
-    getUser: vi.fn<AuthModelPort['getUser']>(),
-    signOut: vi.fn<AuthModelPort['signOut']>(),
-    requestPasswordRecovery:
-      vi.fn<AuthModelPort['requestPasswordRecovery']>(),
-    updatePassword: vi.fn<AuthModelPort['updatePassword']>(),
-  };
+  const model = createAuthModelMock();
 
   model.getUser.mockResolvedValue({
     user: createUser(),
@@ -42,7 +31,10 @@ function setup() {
 
   return {
     model,
-    app: createApp({ authModel: model }),
+    app: createApp({
+      authModel: model,
+      profileModel: createProfileModelMock(),
+    }),
   };
 }
 

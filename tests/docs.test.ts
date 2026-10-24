@@ -2,23 +2,17 @@ import request from 'supertest';
 import { describe, expect, it, vi } from 'vitest';
 
 import { createApp } from '../src/app.js';
-import type { AuthModelPort } from '../src/modules/auth/auth.model.js';
+import { createAuthModelMock, createProfileModelMock } from './helpers/mocks.js';
 
 function setup() {
-  const model = {
-    signUp: vi.fn<AuthModelPort['signUp']>(),
-    signIn: vi.fn<AuthModelPort['signIn']>(),
-    refresh: vi.fn<AuthModelPort['refresh']>(),
-    getUser: vi.fn<AuthModelPort['getUser']>(),
-    signOut: vi.fn<AuthModelPort['signOut']>(),
-    requestPasswordRecovery:
-      vi.fn<AuthModelPort['requestPasswordRecovery']>(),
-    updatePassword: vi.fn<AuthModelPort['updatePassword']>(),
-  };
+  const model = createAuthModelMock();
 
   return {
     model,
-    app: createApp({ authModel: model }),
+    app: createApp({
+      authModel: model,
+      profileModel: createProfileModelMock(),
+    }),
   };
 }
 
@@ -41,6 +35,7 @@ describe('API documentation', () => {
       '/api/v1/auth/sign-in',
       '/api/v1/auth/sign-out',
       '/api/v1/auth/sign-up',
+      '/api/v1/profile',
       '/health',
     ]);
 
@@ -124,6 +119,28 @@ describe('API documentation', () => {
       '200', '400', '401', '403', '413', '429', '500', '502', '503',
     ]);
     expect(model.updatePassword).not.toHaveBeenCalled();
+  });
+
+  it('documents the protected profile operations', async () => {
+    const { app } = setup();
+
+    const response = await request(app)
+      .get('/openapi.json')
+      .expect(200);
+
+    const path = response.body.paths['/api/v1/profile'];
+    const input = response.body.components.schemas.UpdateProfileInput;
+
+    expect(path.get.security).toEqual([{ bearerAuth: [] }]);
+    expect(path.patch.security).toEqual([{ bearerAuth: [] }]);
+    expect(path.patch.requestBody.content['application/json'].schema).toEqual(
+      { $ref: '#/components/schemas/UpdateProfileInput' },
+    );
+    expect(input.additionalProperties).toBe(false);
+    expect(input.properties.avatarUrl).toBeUndefined();
+    expect(Object.keys(path.patch.responses).sort()).toEqual([
+      '200', '400', '401', '404', '413', '500', '502', '503',
+    ]);
   });
 
   it('serves the Swagger UI page', async () => {

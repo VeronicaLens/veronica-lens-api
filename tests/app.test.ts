@@ -2,21 +2,12 @@ import request from 'supertest';
 import { describe, expect, it, vi } from 'vitest';
 
 import { createApp as createApplication } from '../src/app.js';
-import type { AuthModelPort } from '../src/modules/auth/auth.model.js';
+import { createAuthModelMock, createProfileModelMock } from './helpers/mocks.js';
 
 function createApp() {
-  const authModel = {
-    signUp: vi.fn<AuthModelPort['signUp']>(),
-    signIn: vi.fn<AuthModelPort['signIn']>(),
-    refresh: vi.fn<AuthModelPort['refresh']>(),
-    getUser: vi.fn<AuthModelPort['getUser']>(),
-    signOut: vi.fn<AuthModelPort['signOut']>(),
-    requestPasswordRecovery:
-      vi.fn<AuthModelPort['requestPasswordRecovery']>(),
-    updatePassword: vi.fn<AuthModelPort['updatePassword']>(),
-  };
+  const authModel = createAuthModelMock();
 
-  return createApplication({ authModel });
+  return createApplication({ authModel, profileModel: createProfileModelMock() });
 }
 
 const uuidPattern =

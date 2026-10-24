@@ -2,21 +2,17 @@ import request from 'supertest';
 import { describe, expect, it, vi } from 'vitest';
 
 import { createApp } from '../src/app.js';
-import type { AuthModelPort } from '../src/modules/auth/auth.model.js';
+import { createAuthModelMock, createProfileModelMock } from './helpers/mocks.js';
 
 function setup(corsOrigins?: readonly string[], httpsOnly?: boolean) {
-  const authModel = {
-    signUp: vi.fn<AuthModelPort['signUp']>(),
-    signIn: vi.fn<AuthModelPort['signIn']>(),
-    refresh: vi.fn<AuthModelPort['refresh']>(),
-    getUser: vi.fn<AuthModelPort['getUser']>(),
-    signOut: vi.fn<AuthModelPort['signOut']>(),
-    requestPasswordRecovery:
-      vi.fn<AuthModelPort['requestPasswordRecovery']>(),
-    updatePassword: vi.fn<AuthModelPort['updatePassword']>(),
-  };
+  const authModel = createAuthModelMock();
 
-  return createApp({ authModel, corsOrigins, httpsOnly });
+  return createApp({
+    authModel,
+    profileModel: createProfileModelMock(),
+    corsOrigins,
+    httpsOnly,
+  });
 }
 
 const allowedOrigin = 'https://admin.veronicalens.example';

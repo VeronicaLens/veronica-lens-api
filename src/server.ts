@@ -6,6 +6,10 @@ import {
   createUserClient,
 } from './config/supabase.js';
 import { SupabaseAccountModel } from './modules/account/account.model.js';
+import {
+  CachedEphemerisProvider,
+  HorizonsClient,
+} from './modules/astronomy/index.js';
 import { SupabaseAuthModel } from './modules/auth/auth.model.js';
 import { StaticCatalogModel } from './modules/catalog/catalog.model.js';
 import { SupabaseAvatarStorage } from './modules/profile/avatar.storage.js';
@@ -34,6 +38,7 @@ const app = createApp({
   avatarStorage,
   accountModel,
   catalogModel: new StaticCatalogModel(),
+  ephemerisProvider: new CachedEphemerisProvider(new HorizonsClient()),
   corsOrigins: env.CORS_ORIGINS,
   httpsOnly: env.NODE_ENV === 'production',
 });

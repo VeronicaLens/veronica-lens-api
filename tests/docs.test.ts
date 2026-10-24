@@ -38,6 +38,7 @@ describe('API documentation', () => {
       '/api/v1/catalog/celestial-objects/{id}',
       '/api/v1/profile',
       '/api/v1/profile/avatar',
+      '/api/v1/sky-guide/positions',
       '/health',
     ]);
 

@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { vi } from 'vitest';
 
 import type { AccountModelPort } from '../../src/modules/account/account.model.js';
+import type { EphemerisProviderPort } from '../../src/modules/astronomy/index.js';
 import type { AuthModelPort } from '../../src/modules/auth/auth.model.js';
 import { StaticCatalogModel } from '../../src/modules/catalog/catalog.model.js';
 import type { AvatarStoragePort } from '../../src/modules/profile/avatar.storage.js';
@@ -65,6 +66,13 @@ export function createAccountModelMock() {
   } satisfies AccountModelPort;
 }
 
+export function createEphemerisProviderMock() {
+  return {
+    getApparentPosition:
+      vi.fn<EphemerisProviderPort['getApparentPosition']>(),
+  } satisfies EphemerisProviderPort;
+}
+
 // Every dependency required by createApp; override only what a test uses.
 export function createAppMocks() {
   return {
@@ -74,5 +82,6 @@ export function createAppMocks() {
     accountModel: createAccountModelMock(),
     // Static data with no external dependency; the real model is used.
     catalogModel: new StaticCatalogModel(),
+    ephemerisProvider: createEphemerisProviderMock(),
   };
 }

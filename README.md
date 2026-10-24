@@ -120,6 +120,7 @@ src/
     auth/                # Schemas, rotas, controller, service e model
     catalog/             # Catalogo estatico de objetos celestes
     profile/             # Perfil do usuario autenticado
+    sky-guide/           # Posicoes dos objetos do catalogo para o observador
   shared/
     auth/                # Middleware, contexto autenticado e requireAuth
     errors/              # Erros da aplicacao
@@ -133,6 +134,7 @@ tests/
   auth/                  # Testes do modulo de autenticacao
   catalog/               # Testes do catalogo e da integridade dos dados
   profile/               # Testes do modulo de perfil
+  sky-guide/             # Testes do guia do ceu
 ```
 
 Ao adicionar um metodo a um `ModelPort`, atualize o mock correspondente em
@@ -307,8 +309,8 @@ os dados em memoria.
 
 ## Astronomia e JPL Horizons
 
-O modulo `astronomy` calcula posicoes no ceu e ainda nao tem rotas proprias;
-sera usado pelo guia do ceu, eventos e planejamento.
+O modulo `astronomy` calcula posicoes no ceu e nao tem rotas proprias; e usado
+pelo guia do ceu e sera usado por eventos e planejamento.
 
 - **Estrelas e constelacoes** (coordenadas fixas J2000): conversao local de
   equatorial para horizontal (`astro-core.ts`), sem chamada externa. Sem
@@ -341,6 +343,37 @@ guardadas. O cache e por processo e reinicia com ele.
 (Lua vista de Campinas em 2026-06-01T00:00Z). Os testes usam essa resposta para
 validar o parser e para conferir que a conversao local fica a menos de 0,05
 grau do azimute e da elevacao calculados pelo JPL. Os testes nao acessam a rede.
+
+## Guia do ceu
+
+`POST /api/v1/sky-guide/positions` exige bearer token e informa onde estao
+objetos do catalogo para uma localizacao e um instante:
+
+```json
+{
+  "objectIds": ["moon", "jupiter", "crux"],
+  "observer": { "latitudeDegrees": -22.9, "longitudeDegrees": -47.06, "elevationMeters": 600 },
+  "observedAt": "2026-06-01T21:00:00-03:00"
+}
+```
+
+- `objectIds`: 1 a 20 IDs do catalogo; duplicados sao ignorados e a ordem
+  pedida e mantida.
+- `observedAt` e opcional (padrao: agora), em ISO 8601 com fuso, ate um ano
+  antes ou depois do momento atual. A resposta devolve o instante em UTC.
+- `elevationMeters` e opcional (padrao 0).
+
+Cada posicao traz altitude, azimute (a partir do norte verdadeiro, no sentido
+leste) e `aboveHorizon`. Estrelas e constelacoes sao calculadas localmente;
+Lua e planetas vem do JPL Horizons, atraves do cache.
+
+Falhas parciais nao derrubam a requisicao: IDs desconhecidos aparecem em
+`unavailable` com `NOT_FOUND`, e objetos cujo calculo no Horizons falhou, com
+`PROVIDER_UNAVAILABLE`. Erros inesperados continuam retornando `500`.
+
+A rota usa `POST` para que a localizacao do usuario fique no corpo, fora de
+URLs e de logs de acesso de proxies e da hospedagem. A API tambem nao registra
+a localizacao nos proprios logs.
 
 ## Exclusao de conta
 

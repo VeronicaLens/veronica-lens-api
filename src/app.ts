@@ -2,6 +2,7 @@ import express from 'express';
 
 import type { AccountModelPort } from './modules/account/account.model.js';
 import { createAccountRouter } from './modules/account/account.routes.js';
+import type { EphemerisProviderPort } from './modules/astronomy/index.js';
 import type { AuthModelPort } from './modules/auth/auth.model.js';
 import { createAuthRouter } from './modules/auth/auth.routes.js';
 import { AuthService } from './modules/auth/auth.service.js';
@@ -10,6 +11,7 @@ import { createCatalogRouter } from './modules/catalog/catalog.routes.js';
 import type { ProfileModelPort } from './modules/profile/profile.model.js';
 import type { AvatarStoragePort } from './modules/profile/avatar.storage.js';
 import { createProfileRouter } from './modules/profile/profile.routes.js';
+import { createSkyGuideRouter } from './modules/sky-guide/sky-guide.routes.js';
 import { createAuthenticateMiddleware } from './shared/auth/authenticate.middleware.js';
 import { errorHandler } from './shared/http/error-handler.js';
 import { notFoundHandler } from './shared/http/not-found.js';
@@ -26,6 +28,7 @@ interface AppOptions {
   avatarStorage: AvatarStoragePort;
   accountModel: AccountModelPort;
   catalogModel: CatalogModelPort;
+  ephemerisProvider: EphemerisProviderPort;
   corsOrigins?: readonly string[];
   httpsOnly?: boolean;
 }
@@ -66,6 +69,14 @@ export function createApp(options: AppOptions) {
   app.use(
     '/api/v1/catalog',
     createCatalogRouter(options.catalogModel, authenticate),
+  );
+  app.use(
+    '/api/v1/sky-guide',
+    createSkyGuideRouter(
+      options.catalogModel,
+      options.ephemerisProvider,
+      authenticate,
+    ),
   );
   app.use(createDocsRouter());
 

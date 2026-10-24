@@ -69,6 +69,7 @@ export const openApiDocument = {
     { name: 'Profile' },
     { name: 'Account' },
     { name: 'Catalog' },
+    { name: 'Sky guide' },
   ],
 
   paths: {
@@ -438,6 +439,26 @@ export const openApiDocument = {
         },
       },
     },
+
+    '/api/v1/sky-guide/positions': {
+      post: {
+        tags: ['Sky guide'],
+        operationId: 'getSkyPositions',
+        summary: 'Locate catalog objects in the sky for an observer',
+        description:
+          'Stars and constellations are computed locally from J2000 coordinates; the Moon and planets come from JPL Horizons. Unknown ids and provider failures are listed in `unavailable` instead of failing the request. The location is sent in the body so it does not appear in URLs or access logs.',
+        security: [{ bearerAuth: [] }],
+        requestBody: requestBody('SkyPositionsInput'),
+        responses: {
+          '200': dataResponse('Positions and unavailable objects', 'SkyPositionsResult'),
+          '400': errorResponse('Invalid input or observation time out of range'),
+          '401': errorResponse('Missing, invalid or expired token'),
+          '413': errorResponse('Request body exceeds 1 MB'),
+          '500': errorResponse('Unexpected server error'),
+          '503': errorResponse('Authentication provider unavailable'),
+        },
+      },
+    },
   },
 
   components: {
@@ -700,6 +721,93 @@ export const openApiDocument = {
           kind: { type: 'string', enum: ['ephemeris'] },
           provider: { type: 'string', enum: ['jpl-horizons'] },
           providerObjectId: { type: 'string' },
+        },
+      },
+
+      SkyPositionsInput: {
+        type: 'object',
+        required: ['objectIds', 'observer'],
+        additionalProperties: false,
+        properties: {
+          objectIds: {
+            type: 'array',
+            minItems: 1,
+            maxItems: 20,
+            items: { type: 'string', pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$' },
+            description: 'Catalog ids; duplicates are ignored.',
+          },
+          observedAt: {
+            type: 'string',
+            format: 'date-time',
+            description: 'ISO 8601 with offset, within one year from now. Defaults to now.',
+          },
+          observer: {
+            type: 'object',
+            required: ['latitudeDegrees', 'longitudeDegrees'],
+            additionalProperties: false,
+            properties: {
+              latitudeDegrees: { type: 'number', minimum: -90, maximum: 90 },
+              longitudeDegrees: { type: 'number', minimum: -180, maximum: 180 },
+              elevationMeters: {
+                type: 'number',
+                minimum: -500,
+                maximum: 9000,
+                default: 0,
+              },
+            },
+          },
+        },
+      },
+
+      SkyPositionsResult: {
+        type: 'object',
+        required: ['observedAt', 'positions', 'unavailable'],
+        properties: {
+          observedAt: { type: 'string', format: 'date-time' },
+          positions: {
+            type: 'array',
+            items: {
+              type: 'object',
+              required: ['id', 'name', 'type', 'magnitude', 'horizontal', 'aboveHorizon'],
+              properties: {
+                id: { type: 'string' },
+                name: { type: 'string' },
+                type: {
+                  type: 'string',
+                  enum: ['moon', 'planet', 'star', 'constellation'],
+                },
+                magnitude: { type: 'number', nullable: true },
+                horizontal: {
+                  type: 'object',
+                  required: ['altitudeDegrees', 'azimuthDegrees'],
+                  properties: {
+                    altitudeDegrees: { type: 'number', minimum: -90, maximum: 90 },
+                    azimuthDegrees: {
+                      type: 'number',
+                      minimum: 0,
+                      maximum: 360,
+                      description: 'Measured eastward from true north.',
+                    },
+                  },
+                },
+                aboveHorizon: { type: 'boolean' },
+              },
+            },
+          },
+          unavailable: {
+            type: 'array',
+            items: {
+              type: 'object',
+              required: ['id', 'reason'],
+              properties: {
+                id: { type: 'string' },
+                reason: {
+                  type: 'string',
+                  enum: ['NOT_FOUND', 'PROVIDER_UNAVAILABLE'],
+                },
+              },
+            },
+          },
         },
       },
 

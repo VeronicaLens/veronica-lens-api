@@ -78,6 +78,41 @@ export function normalizeDegrees(value: number): number {
   return ((value % 360) + 360) % 360;
 }
 
+// Low-precision solar coordinates from the Astronomical Almanac
+// (about 0.01 degree between 1950 and 2050).
+export function sunEquatorial(date: Date): EquatorialCoordinates {
+  const days = toJulianDate(date) - JULIAN_DATE_J2000;
+  const meanLongitude = normalizeDegrees(280.46 + 0.9856474 * days);
+  const meanAnomaly = toRadians(normalizeDegrees(357.528 + 0.9856003 * days));
+  const eclipticLongitude = toRadians(
+    meanLongitude +
+      1.915 * Math.sin(meanAnomaly) +
+      0.02 * Math.sin(2 * meanAnomaly),
+  );
+  const obliquity = toRadians(23.439 - 0.0000004 * days);
+
+  return {
+    rightAscensionDegrees: normalizeDegrees(
+      toDegrees(
+        Math.atan2(
+          Math.cos(obliquity) * Math.sin(eclipticLongitude),
+          Math.cos(eclipticLongitude),
+        ),
+      ),
+    ),
+    declinationDegrees: toDegrees(
+      Math.asin(Math.sin(obliquity) * Math.sin(eclipticLongitude)),
+    ),
+  };
+}
+
+export function sunHorizontal(
+  date: Date,
+  observer: ObserverLocation,
+): HorizontalCoordinates {
+  return equatorialToHorizontal(sunEquatorial(date), date, observer);
+}
+
 function assertValidDate(value: Date): void {
   if (Number.isNaN(value.getTime())) {
     throw new RangeError('date must be valid');

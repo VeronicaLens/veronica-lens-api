@@ -8,10 +8,12 @@ import { createAuthRouter } from './modules/auth/auth.routes.js';
 import { AuthService } from './modules/auth/auth.service.js';
 import type { CatalogModelPort } from './modules/catalog/catalog.model.js';
 import { createCatalogRouter } from './modules/catalog/catalog.routes.js';
+import { createConditionsRouter } from './modules/conditions/conditions.routes.js';
 import type { ProfileModelPort } from './modules/profile/profile.model.js';
 import type { AvatarStoragePort } from './modules/profile/avatar.storage.js';
 import { createProfileRouter } from './modules/profile/profile.routes.js';
 import { createSkyGuideRouter } from './modules/sky-guide/sky-guide.routes.js';
+import type { WeatherProviderPort } from './modules/weather/index.js';
 import { createAuthenticateMiddleware } from './shared/auth/authenticate.middleware.js';
 import { errorHandler } from './shared/http/error-handler.js';
 import { notFoundHandler } from './shared/http/not-found.js';
@@ -29,6 +31,7 @@ interface AppOptions {
   accountModel: AccountModelPort;
   catalogModel: CatalogModelPort;
   ephemerisProvider: EphemerisProviderPort;
+  weatherProvider: WeatherProviderPort;
   corsOrigins?: readonly string[];
   httpsOnly?: boolean;
 }
@@ -77,6 +80,10 @@ export function createApp(options: AppOptions) {
       options.ephemerisProvider,
       authenticate,
     ),
+  );
+  app.use(
+    '/api/v1/conditions',
+    createConditionsRouter(options.weatherProvider, authenticate),
   );
   app.use(createDocsRouter());
 

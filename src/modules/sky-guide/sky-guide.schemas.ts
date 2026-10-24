@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { observerSchema } from '../astronomy/index.js';
 import { celestialObjectIdSchema } from '../catalog/catalog.schemas.js';
 
 export const skyPositionsSchema = z.strictObject({
@@ -9,11 +10,7 @@ export const skyPositionsSchema = z.strictObject({
     .max(20)
     .transform((ids) => [...new Set(ids)]),
   observedAt: z.iso.datetime({ offset: true }).optional(),
-  observer: z.strictObject({
-    latitudeDegrees: z.number().min(-90).max(90),
-    longitudeDegrees: z.number().min(-180).max(180),
-    elevationMeters: z.number().min(-500).max(9_000).default(0),
-  }),
+  observer: observerSchema,
 });
 
 export type SkyPositionsInput = z.infer<typeof skyPositionsSchema>;

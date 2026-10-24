@@ -1,8 +1,11 @@
 export {
   equatorialToHorizontal,
   greenwichMeanSiderealTimeDegrees,
+  sunEquatorial,
+  sunHorizontal,
   toJulianDate,
 } from './astro-core.js';
+export { observerSchema } from './astronomy.schemas.js';
 export { CachedEphemerisProvider } from './cached-ephemeris.js';
 export { HorizonsClient } from './horizons.client.js';
 export {

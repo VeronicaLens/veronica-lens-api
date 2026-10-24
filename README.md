@@ -119,6 +119,7 @@ src/
     astronomy/           # Calculos de posicao e cliente do JPL Horizons
     auth/                # Schemas, rotas, controller, service e model
     catalog/             # Catalogo estatico de objetos celestes
+    conditions/          # Avaliacao das condicoes de observacao
     profile/             # Perfil do usuario autenticado
     sky-guide/           # Posicoes dos objetos do catalogo para o observador
     weather/             # Previsao horaria via Open-Meteo, com cache
@@ -134,6 +135,7 @@ tests/
   fixtures/              # Respostas reais de provedores externos
   auth/                  # Testes do modulo de autenticacao
   catalog/               # Testes do catalogo e da integridade dos dados
+  conditions/            # Avaliacao, service e rotas de condicoes
   profile/               # Testes do modulo de perfil
   sky-guide/             # Testes do guia do ceu
   weather/               # Cliente do Open-Meteo e cache
@@ -381,8 +383,8 @@ a localizacao nos proprios logs.
 
 O modulo `weather` obtem previsao horaria do
 [Open-Meteo](https://open-meteo.com/), servico publico que nao exige chave.
-Ainda nao tem rotas proprias; sera usado pelas condicoes de observacao e pelo
-planejamento.
+Nao tem rotas proprias; e usado pelas condicoes de observacao e sera usado
+pelo planejamento.
 
 Cada hora traz temperatura, umidade relativa, probabilidade e volume de
 precipitacao, cobertura de nuvens, visibilidade e vento, sempre em UTC e em
@@ -411,6 +413,43 @@ sao guardadas.
 
 O limitador de concorrencia dos dois clientes externos fica em
 `src/shared/http/semaphore.ts`.
+
+## Condicoes de observacao
+
+Duas rotas autenticadas, ambas com `POST` para manter a localizacao fora de
+URLs e logs:
+
+- `POST /api/v1/conditions/current` com `{ observer, at? }`: avalia um instante
+  (padrao: agora; aceita ate 1 hora no passado e 7 dias a frente). O clima vem
+  da hora de previsao mais proxima; a altitude do Sol, do instante exato.
+- `POST /api/v1/conditions/forecast` com `{ observer }`: 168 avaliacoes
+  horarias, a partir da proxima hora cheia (UTC).
+
+Cada hora traz os valores do clima (podem ser `null`), `sunAltitudeDegrees`,
+fatores e uma classificacao geral:
+
+| Fator           | `good`          | `caution`              | `poor`          |
+| --------------- | --------------- | ---------------------- | --------------- |
+| `darkness`      | Sol <= -18 grau | -18 a -6 (crepusculo)  | Sol > -6 grau   |
+| `cloud-cover`   | <= 20%          | <= 60%                 | > 60%           |
+| `precipitation` | <= 10% e < 0,1 mm | <= 30% e <= 1 mm     | acima disso     |
+| `visibility`    | >= 10 km        | >= 5 km                | < 5 km          |
+| `wind`          | <= 15 km/h      | <= 30 km/h             | > 30 km/h       |
+| `humidity`      | <= 80%          | <= 90%                 | > 90%           |
+
+Valores ausentes viram `unknown`. `rating` e `poor` se qualquer fator critico
+(todos, exceto umidade, que so indica risco de orvalho) for `poor`; `good` se
+todos forem `good`; `fair` nos demais casos, inclusive com `unknown`.
+
+A API devolve apenas codigos e numeros; o app monta os textos no idioma do
+usuario. A altitude do Sol e calculada localmente (formula de baixa precisao do
+Astronomical Almanac, erro de cerca de 0,01 grau, conferido contra o JPL
+Horizons nos testes), sem chamada externa. Falhas do Open-Meteo retornam
+`503 CONDITIONS_UNAVAILABLE`.
+
+Mudancas em relacao a API antiga: o fator `darkness` (antes, meio-dia de ceu
+limpo era avaliado como bom), os textos em portugues gerados pela API
+(`skyLabel`, `summary`) foram removidos e a localizacao saiu da query string.
 
 ## Exclusao de conta
 

@@ -43,6 +43,14 @@ const commonAuthErrors = {
   '503': errorResponse('Authentication provider unavailable'),
 };
 
+const conditionsErrors = {
+  '400': errorResponse('Invalid input or observation time out of range'),
+  '401': errorResponse('Missing, invalid or expired token'),
+  '413': errorResponse('Request body exceeds 1 MB'),
+  '500': errorResponse('Unexpected server error'),
+  '503': errorResponse('Weather or authentication service unavailable'),
+};
+
 const profileErrors = {
   '401': errorResponse('Missing, invalid or expired token'),
   '404': errorResponse('Profile not found'),
@@ -70,6 +78,7 @@ export const openApiDocument = {
     { name: 'Account' },
     { name: 'Catalog' },
     { name: 'Sky guide' },
+    { name: 'Conditions' },
   ],
 
   paths: {
@@ -459,6 +468,37 @@ export const openApiDocument = {
         },
       },
     },
+
+    '/api/v1/conditions/current': {
+      post: {
+        tags: ['Conditions'],
+        operationId: 'getCurrentConditions',
+        summary: 'Assess observing conditions for one instant',
+        description:
+          'Weather from the closest forecast hour (Open-Meteo) and the Sun altitude at the exact instant. `at` defaults to now and accepts up to one hour in the past and seven days ahead. Factors and rating are codes; the app renders the text.',
+        security: [{ bearerAuth: [] }],
+        requestBody: requestBody('CurrentConditionsInput'),
+        responses: {
+          '200': dataResponse('Conditions for the closest hour', 'CurrentConditionsResult'),
+          ...conditionsErrors,
+        },
+      },
+    },
+
+    '/api/v1/conditions/forecast': {
+      post: {
+        tags: ['Conditions'],
+        operationId: 'getConditionsForecast',
+        summary: 'Assess observing conditions for the next seven days',
+        description: 'Returns 168 hourly assessments starting at the next full hour (UTC).',
+        security: [{ bearerAuth: [] }],
+        requestBody: requestBody('ConditionsForecastInput'),
+        responses: {
+          '200': dataResponse('Hourly conditions', 'ConditionsForecastResult'),
+          ...conditionsErrors,
+        },
+      },
+    },
   },
 
   components: {
@@ -808,6 +848,99 @@ export const openApiDocument = {
               },
             },
           },
+        },
+      },
+
+      Observer: {
+        type: 'object',
+        required: ['latitudeDegrees', 'longitudeDegrees'],
+        additionalProperties: false,
+        properties: {
+          latitudeDegrees: { type: 'number', minimum: -90, maximum: 90 },
+          longitudeDegrees: { type: 'number', minimum: -180, maximum: 180 },
+          elevationMeters: { type: 'number', minimum: -500, maximum: 9000, default: 0 },
+        },
+      },
+
+      CurrentConditionsInput: {
+        type: 'object',
+        required: ['observer'],
+        additionalProperties: false,
+        properties: {
+          observer: ref('Observer'),
+          at: {
+            type: 'string',
+            format: 'date-time',
+            description: 'ISO 8601 with offset. Defaults to now.',
+          },
+        },
+      },
+
+      ConditionsForecastInput: {
+        type: 'object',
+        required: ['observer'],
+        additionalProperties: false,
+        properties: { observer: ref('Observer') },
+      },
+
+      HourlyConditions: {
+        type: 'object',
+        required: ['forecastAt', 'sunAltitudeDegrees', 'weather', 'rating', 'factors'],
+        properties: {
+          forecastAt: { type: 'string', format: 'date-time' },
+          sunAltitudeDegrees: { type: 'number' },
+          weather: {
+            type: 'object',
+            description: 'Null when the weather model has no value for that hour.',
+            properties: Object.fromEntries(
+              [
+                'temperatureCelsius',
+                'relativeHumidityPercent',
+                'precipitationProbabilityPercent',
+                'precipitationMillimeters',
+                'cloudCoverPercent',
+                'visibilityMeters',
+                'windSpeedKilometersPerHour',
+              ].map((name) => [name, { type: 'number', nullable: true }]),
+            ),
+          },
+          rating: { type: 'string', enum: ['good', 'fair', 'poor'] },
+          factors: {
+            type: 'array',
+            items: {
+              type: 'object',
+              required: ['code', 'status'],
+              properties: {
+                code: {
+                  type: 'string',
+                  enum: ['darkness', 'cloud-cover', 'precipitation', 'visibility', 'wind', 'humidity'],
+                },
+                status: {
+                  type: 'string',
+                  enum: ['good', 'caution', 'poor', 'unknown'],
+                },
+              },
+            },
+          },
+        },
+      },
+
+      CurrentConditionsResult: {
+        type: 'object',
+        required: ['requestedAt', 'conditions'],
+        properties: {
+          requestedAt: { type: 'string', format: 'date-time' },
+          conditions: ref('HourlyConditions'),
+        },
+      },
+
+      ConditionsForecastResult: {
+        type: 'object',
+        required: ['from', 'to', 'hours'],
+        properties: {
+          from: { type: 'string', format: 'date-time' },
+          to: { type: 'string', format: 'date-time' },
+          hours: { type: 'array', items: ref('HourlyConditions') },
         },
       },
 

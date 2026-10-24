@@ -3,6 +3,7 @@ import { vi } from 'vitest';
 
 import type { AccountModelPort } from '../../src/modules/account/account.model.js';
 import type { EphemerisProviderPort } from '../../src/modules/astronomy/index.js';
+import type { WeatherProviderPort } from '../../src/modules/weather/index.js';
 import type { AuthModelPort } from '../../src/modules/auth/auth.model.js';
 import { StaticCatalogModel } from '../../src/modules/catalog/catalog.model.js';
 import type { AvatarStoragePort } from '../../src/modules/profile/avatar.storage.js';
@@ -73,6 +74,12 @@ export function createEphemerisProviderMock() {
   } satisfies EphemerisProviderPort;
 }
 
+export function createWeatherProviderMock() {
+  return {
+    getHourlyForecast: vi.fn<WeatherProviderPort['getHourlyForecast']>(),
+  } satisfies WeatherProviderPort;
+}
+
 // Every dependency required by createApp; override only what a test uses.
 export function createAppMocks() {
   return {
@@ -83,5 +90,6 @@ export function createAppMocks() {
     // Static data with no external dependency; the real model is used.
     catalogModel: new StaticCatalogModel(),
     ephemerisProvider: createEphemerisProviderMock(),
+    weatherProvider: createWeatherProviderMock(),
   };
 }

@@ -13,6 +13,7 @@ import {
 import { SupabaseAuthModel } from './modules/auth/auth.model.js';
 import { StaticCatalogModel } from './modules/catalog/catalog.model.js';
 import { SupabaseEventsModel } from './modules/events/events.model.js';
+import { SupabaseLearningModel } from './modules/learning/learning.model.js';
 import { SupabaseObservationsModel } from './modules/observations/observations.model.js';
 import { SupabaseAvatarStorage } from './modules/profile/avatar.storage.js';
 import { SupabaseProfileModel } from './modules/profile/profile.model.js';
@@ -47,6 +48,7 @@ const app = createApp({
   ephemerisProvider: new CachedEphemerisProvider(new HorizonsClient()),
   weatherProvider: new CachedWeatherProvider(new OpenMeteoClient()),
   eventsModel: new SupabaseEventsModel(createClientForUser),
+  learningModel: new SupabaseLearningModel(createClientForUser),
   observationsModel: new SupabaseObservationsModel(createClientForUser),
   corsOrigins: env.CORS_ORIGINS,
   httpsOnly: env.NODE_ENV === 'production',

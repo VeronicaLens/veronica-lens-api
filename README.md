@@ -121,6 +121,7 @@ src/
     catalog/             # Catalogo estatico de objetos celestes
     conditions/          # Avaliacao das condicoes de observacao
     events/              # Eventos astronomicos curados (Supabase, RLS)
+    learning/            # Trilhas e licoes publicadas, progresso por usuario
     planning/            # Recomendacao da melhor janela de observacao
     profile/             # Perfil do usuario autenticado
     sky-guide/           # Posicoes dos objetos do catalogo para o observador
@@ -139,6 +140,7 @@ tests/
   catalog/               # Testes do catalogo e da integridade dos dados
   conditions/            # Avaliacao, service e rotas de condicoes
   events/                # Eventos curados
+  learning/              # Trilhas, licoes e progresso
   planning/              # Recomendacao de janelas de observacao
   profile/               # Testes do modulo de perfil
   sky-guide/             # Testes do guia do ceu
@@ -535,6 +537,23 @@ descontinuado: esses horarios sao calculados na hora, sem persistencia, em
 `POST /api/v1/sky-guide/rise-set`. As
 colunas e a tabela `astronomical_event_sync_runs` criadas para o job continuam
 no banco ate uma migration de limpeza no `veronica-lens-database`.
+
+## Trilhas e licoes
+
+Todas as rotas exigem bearer token. Trilhas e licoes sao **somente leitura**
+para o usuario: o conteudo e publicado pelo banco (`learning_tracks` e
+`lessons`). O progresso e gravado **por usuario** em `user_learning_progress`.
+
+- `GET /api/v1/learning/tracks`: trilhas publicadas, com resumo de progresso
+  (`totalLessons`, `completedLessons`, `percent`).
+- `GET /api/v1/learning/tracks/{slug}`: trilha com suas licoes.
+- `GET /api/v1/learning/lessons/{id}`: licao com `content` e o progresso do usuario.
+- `PUT /api/v1/learning/lessons/{id}/progress`: grava o progresso do usuario.
+  - `not_started`: zera o progresso.
+  - `in_progress`: exige `progressPercent` de 1 a 99.
+  - `completed`: grava 100% e a data de conclusao.
+- Licoes de trilhas nao publicadas retornam 404, mesmo com o id correto.
+- O progresso so e lido e gravado pelo proprio usuario (RLS).
 
 ## Observacoes
 

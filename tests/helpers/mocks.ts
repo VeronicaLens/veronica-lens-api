@@ -4,6 +4,7 @@ import { vi } from 'vitest';
 import type { AccountModelPort } from '../../src/modules/account/account.model.js';
 import type { EphemerisProviderPort } from '../../src/modules/astronomy/index.js';
 import type { EventsModelPort } from '../../src/modules/events/events.model.js';
+import type { LearningModelPort } from '../../src/modules/learning/learning.model.js';
 import type { ObservationsModelPort } from '../../src/modules/observations/observations.model.js';
 import type { WeatherProviderPort } from '../../src/modules/weather/index.js';
 import type { AuthModelPort } from '../../src/modules/auth/auth.model.js';
@@ -91,6 +92,18 @@ export function createEventsModelMock() {
   } satisfies EventsModelPort;
 }
 
+export function createLearningModelMock() {
+  return {
+    findTracks: vi.fn<LearningModelPort['findTracks']>(),
+    findTrackBySlug: vi.fn<LearningModelPort['findTrackBySlug']>(),
+    findLessons: vi.fn<LearningModelPort['findLessons']>(),
+    findLessonById: vi.fn<LearningModelPort['findLessonById']>(),
+    findProgress: vi.fn<LearningModelPort['findProgress']>(),
+    findLessonProgress: vi.fn<LearningModelPort['findLessonProgress']>(),
+    upsertProgress: vi.fn<LearningModelPort['upsertProgress']>(),
+  } satisfies LearningModelPort;
+}
+
 export function createObservationsModelMock() {
   return {
     list: vi.fn<ObservationsModelPort['list']>(),
@@ -112,6 +125,7 @@ export function createAppMocks() {
     ephemerisProvider: createEphemerisProviderMock(),
     weatherProvider: createWeatherProviderMock(),
     eventsModel: createEventsModelMock(),
+    learningModel: createLearningModelMock(),
     observationsModel: createObservationsModelMock(),
   };
 }

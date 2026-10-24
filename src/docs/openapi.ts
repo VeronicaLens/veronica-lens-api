@@ -81,6 +81,7 @@ export const openApiDocument = {
     { name: 'Conditions' },
     { name: 'Planning' },
     { name: 'Events' },
+    { name: 'Learning' },
     { name: 'Observations' },
   ],
 
@@ -626,6 +627,160 @@ export const openApiDocument = {
           '404': errorResponse('Event not found or not published'),
           '500': errorResponse('Unexpected server error'),
           '503': errorResponse('Events or authentication service unavailable'),
+        },
+      },
+    },
+
+    '/api/v1/learning/tracks': {
+      get: {
+        tags: ['Learning'],
+        operationId: 'listLearningTracks',
+        summary: 'List published learning tracks',
+        description:
+          'Published tracks in display order, with the caller progress summary. Tracks and lessons are read-only for users; progress is stored per user.',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': {
+            description: 'Tracks with progress summary',
+            content: jsonContent({
+              type: 'object',
+              required: ['data', 'meta'],
+              properties: {
+                data: {
+                  type: 'object',
+                  required: ['tracks'],
+                  properties: { tracks: { type: 'array', items: { type: 'object' } } },
+                },
+                meta: { type: 'object', required: ['count'], properties: { count: { type: 'integer' } } },
+              },
+            }),
+          },
+          '401': errorResponse('Missing, invalid or expired token'),
+          '500': errorResponse('Unexpected server error'),
+          '503': errorResponse('Learning or authentication service unavailable'),
+        },
+      },
+    },
+
+    '/api/v1/learning/tracks/{slug}': {
+      get: {
+        tags: ['Learning'],
+        operationId: 'getLearningTrack',
+        summary: 'Get a learning track with its lessons',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'slug', in: 'path', required: true, schema: { type: 'string', maxLength: 80, pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$' } },
+        ],
+        responses: {
+          '200': {
+            description: 'Track with lessons and progress',
+            content: jsonContent({
+              type: 'object',
+              required: ['data'],
+              properties: {
+                data: {
+                  type: 'object',
+                  required: ['track'],
+                  properties: { track: { type: 'object' } },
+                },
+              },
+            }),
+          },
+          '401': errorResponse('Missing, invalid or expired token'),
+          '404': errorResponse('Track not found or not published'),
+          '500': errorResponse('Unexpected server error'),
+          '503': errorResponse('Learning or authentication service unavailable'),
+        },
+      },
+    },
+
+    '/api/v1/learning/lessons/{id}': {
+      get: {
+        tags: ['Learning'],
+        operationId: 'getLearningLesson',
+        summary: 'Get a lesson with its content and caller progress',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+        ],
+        responses: {
+          '200': {
+            description: 'Lesson with content and progress',
+            content: jsonContent({
+              type: 'object',
+              required: ['data'],
+              properties: {
+                data: {
+                  type: 'object',
+                  required: ['lesson'],
+                  properties: { lesson: { type: 'object' } },
+                },
+              },
+            }),
+          },
+          '401': errorResponse('Missing, invalid or expired token'),
+          '404': errorResponse('Lesson not found or not published'),
+          '500': errorResponse('Unexpected server error'),
+          '503': errorResponse('Learning or authentication service unavailable'),
+        },
+      },
+    },
+
+    '/api/v1/learning/lessons/{id}/progress': {
+      put: {
+        tags: ['Learning'],
+        operationId: 'updateLearningProgress',
+        summary: 'Save the caller progress for a lesson',
+        description:
+          'Creates or replaces the caller progress. `in_progress` needs `progressPercent` from 1 to 99; `completed` sets 100 percent and a completion date; `not_started` resets the lesson.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+        ],
+        requestBody: {
+          required: true,
+          content: jsonContent({
+            type: 'object',
+            required: ['status'],
+            oneOf: [
+              {
+                properties: { status: { const: 'not_started' }, progressPercent: { const: 0 } },
+                required: ['status'],
+              },
+              {
+                properties: {
+                  status: { const: 'in_progress' },
+                  progressPercent: { type: 'integer', minimum: 1, maximum: 99 },
+                },
+                required: ['status', 'progressPercent'],
+              },
+              {
+                properties: { status: { const: 'completed' }, progressPercent: { const: 100 } },
+                required: ['status'],
+              },
+            ],
+          }),
+        },
+        responses: {
+          '200': {
+            description: 'Saved progress',
+            content: jsonContent({
+              type: 'object',
+              required: ['data'],
+              properties: {
+                data: {
+                  type: 'object',
+                  required: ['progress'],
+                  properties: { progress: { type: 'object' } },
+                },
+              },
+            }),
+          },
+          '400': errorResponse('Invalid progress payload'),
+          '401': errorResponse('Missing, invalid or expired token'),
+          '404': errorResponse('Lesson not found or not published'),
+          '500': errorResponse('Unexpected server error'),
+          '503': errorResponse('Learning or authentication service unavailable'),
         },
       },
     },

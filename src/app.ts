@@ -10,6 +10,8 @@ import type { CatalogModelPort } from './modules/catalog/catalog.model.js';
 import { createCatalogRouter } from './modules/catalog/catalog.routes.js';
 import { createConditionsRouter } from './modules/conditions/conditions.routes.js';
 import type { EventsModelPort } from './modules/events/events.model.js';
+import type { LearningModelPort } from './modules/learning/learning.model.js';
+import { createLearningRouter } from './modules/learning/learning.routes.js';
 import { createEventsRouter } from './modules/events/events.routes.js';
 import type { ObservationsModelPort } from './modules/observations/observations.model.js';
 import { createObservationsRouter } from './modules/observations/observations.routes.js';
@@ -38,6 +40,7 @@ interface AppOptions {
   ephemerisProvider: EphemerisProviderPort;
   weatherProvider: WeatherProviderPort;
   eventsModel: EventsModelPort;
+  learningModel: LearningModelPort;
   observationsModel: ObservationsModelPort;
   corsOrigins?: readonly string[];
   httpsOnly?: boolean;
@@ -104,6 +107,10 @@ export function createApp(options: AppOptions) {
   app.use(
     '/api/v1/events',
     createEventsRouter(options.eventsModel, authenticate),
+  );
+  app.use(
+    '/api/v1/learning',
+    createLearningRouter(options.learningModel, authenticate),
   );
   app.use(
     '/api/v1/observations',

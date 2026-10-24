@@ -45,4 +45,33 @@ describe('SupabaseHealthProbe', () => {
 
     expect((await probe.check()).status).toBe('down');
   });
+
+  it('serves repeated checks from the cache within the TTL', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
+    const probe = new SupabaseHealthProbe('https://project.supabase.co', 3000, fetchImpl, 15_000);
+
+    const [first, second] = await Promise.all([probe.check(), probe.check()]);
+    await probe.check();
+
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(first).toEqual(second);
+  });
+
+  it('calls Supabase again once the cache TTL has passed', async () => {
+    vi.useFakeTimers();
+
+    try {
+      const fetchImpl = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
+      const probe = new SupabaseHealthProbe('https://project.supabase.co', 3000, fetchImpl, 1000);
+
+      await probe.check();
+      vi.advanceTimersByTime(1001);
+      await probe.check();
+
+      expect(fetchImpl).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
+

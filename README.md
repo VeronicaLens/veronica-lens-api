@@ -594,7 +594,8 @@ que seguem o status do Storage.
 - `GET /api/v1/health/connectivity`: publico. Chama o endpoint de health do
   Auth do Supabase com timeout de 3 segundos. Responde `200` com
   `status: "ok"` ou `503` com `status: "degraded"`. Nao expoe URLs nem
-  mensagens de erro, apenas o status e a latencia do check.
+  mensagens de erro, apenas o status e a latencia do check. O resultado fica em
+  cache por 15 segundos e chamadas simultaneas compartilham a mesma consulta.
 
 ## Notificacoes push
 
@@ -622,7 +623,9 @@ Limitacoes conhecidas:
   recibos da Expo nao sao consultados.
 - Se a execucao cair depois de gravar os registros pendentes e antes do envio,
   esses registros ficam `pending` e nao sao reenviados automaticamente.
-- A lista de usuarios para `in()` nao e dividida em lotes.
+- Leituras do dispatch sao paginadas de 1000 em 1000 linhas, porque o PostgREST
+  trunca respostas sem erro. Filtros `in()` e inserts sao divididos em lotes
+  (100 e 500). Os `markDelivery*` ainda sao um update por linha.
 - O envio precisa de um agendador externo (por exemplo, cron ou GitHub Actions)
   que chame o endpoint de dispatch periodicamente.
 

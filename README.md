@@ -10,8 +10,9 @@ senha por email, atualizacao da senha com a sessao do proprio usuario,
 consulta/edicao do proprio perfil, upload/remocao de avatar, exclusao da
 propria conta e consulta ao catalogo de objetos celestes. Tambem estao
 implementados eventos astronomicos, trilhas e licoes, historico de observacoes
-com upload de fotos e registro de dispositivos para notificacoes push.
-Os demais dominios (health e conectividade) ainda nao estao implementados.
+com upload de fotos, registro de dispositivos para notificacoes push e
+health/conectividade.
+Todos os dominios planejados da API estao implementados.
 
 ## Requisitos
 
@@ -89,6 +90,8 @@ Com a API rodando na porta padrao:
   ferramentas como Postman.
 - [Health check](http://localhost:3000/health): verifica o processo da API,
   sem consultar Supabase.
+- [Conectividade](http://localhost:3000/api/v1/health/connectivity): verifica
+  o acesso ao Supabase (ver secao Health e conectividade).
 
 Ajuste host e porta de acordo com o ambiente. Na API hospedada, os caminhos
 `/docs/` e `/openapi.json` permanecem os mesmos.
@@ -124,6 +127,7 @@ src/
     conditions/          # Avaliacao das condicoes de observacao
     events/              # Eventos astronomicos curados (Supabase, RLS)
     learning/            # Trilhas e licoes publicadas, progresso por usuario
+    health/              # Probe de conectividade com o Supabase
     notifications/       # Tokens Expo por dispositivo e envio de eventos
     planning/            # Recomendacao da melhor janela de observacao
     profile/             # Perfil do usuario autenticado
@@ -583,6 +587,16 @@ retorna `503 OBSERVATION_UNAVAILABLE`; falha de Storage, `503
 OBSERVATION_STORAGE_UNAVAILABLE`, exceto tamanho (413), tipo (415) e token (401),
 que seguem o status do Storage.
 
+## Health e conectividade
+
+- `GET /health` (raiz): liveness do processo. Nao consulta o Supabase e e o
+  endpoint usado pelo health check do Render.
+- `GET /api/v1/health/connectivity`: publico. Chama o endpoint de health do
+  Auth do Supabase com timeout de 3 segundos. Responde `200` com
+  `status: "ok"` ou `503` com `status: "degraded"`. Nao expoe URLs nem
+  mensagens de erro, apenas o status e a latencia do check. O resultado fica em
+  cache por 15 segundos e chamadas simultaneas compartilham a mesma consulta.
+
 ## Notificacoes push
 
 Os dispositivos usam tokens Expo (`ExponentPushToken[...]`). Rotas de usuario
@@ -609,7 +623,9 @@ Limitacoes conhecidas:
   recibos da Expo nao sao consultados.
 - Se a execucao cair depois de gravar os registros pendentes e antes do envio,
   esses registros ficam `pending` e nao sao reenviados automaticamente.
-- A lista de usuarios para `in()` nao e dividida em lotes.
+- Leituras do dispatch sao paginadas de 1000 em 1000 linhas, porque o PostgREST
+  trunca respostas sem erro. Filtros `in()` e inserts sao divididos em lotes
+  (100 e 500). Os `markDelivery*` ainda sao um update por linha.
 - O envio precisa de um agendador externo (por exemplo, cron ou GitHub Actions)
   que chame o endpoint de dispatch periodicamente.
 

@@ -125,6 +125,24 @@ export const openApiDocument = {
       },
     },
 
+    '/api/v1/auth/google': {
+      post: {
+        tags: ['Authentication'],
+        operationId: 'signInWithGoogle',
+        summary: 'Sign in with a Google ID token',
+        description:
+          'Send the ID token obtained by Google Sign-In on the device. If the token was requested with a nonce, send the raw nonce. A new account is created on the first sign-in.',
+        requestBody: requestBody('GoogleSignInInput'),
+        responses: {
+          '200': dataResponse('Authenticated session', 'PublicSession'),
+          ...commonAuthErrors,
+          '401': errorResponse('Invalid or expired Google credential'),
+          '403': errorResponse('Email confirmation required'),
+          '413': errorResponse('Request body exceeds 1 MB'),
+        },
+      },
+    },
+
     '/api/v1/auth/refresh': {
       post: {
         tags: ['Authentication'],
@@ -381,6 +399,19 @@ export const openApiDocument = {
             minLength: 1,
             maxLength: 100,
           },
+        },
+      },
+
+      GoogleSignInInput: {
+        type: 'object',
+        required: ['idToken'],
+        properties: {
+          idToken: {
+            type: 'string',
+            maxLength: 8192,
+            pattern: '^[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+$',
+          },
+          nonce: { type: 'string', minLength: 1, maxLength: 256 },
         },
       },
 

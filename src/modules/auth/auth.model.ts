@@ -6,6 +6,7 @@ import type {
 } from '@supabase/supabase-js';
 
 import type {
+  GoogleSignInInput,
   RefreshSessionInput,
   SignInInput,
   SignUpInput,
@@ -44,6 +45,7 @@ const MIN_SESSION_VALIDITY_MS = 2 * 60 * 1000;
 export interface AuthModelPort {
   signUp(input: SignUpInput): Promise<AuthSessionResult>;
   signIn(input: SignInInput): Promise<AuthSessionResult>;
+  signInWithGoogle(input: GoogleSignInInput): Promise<AuthSessionResult>;
   refresh(input: RefreshSessionInput): Promise<AuthSessionResult>;
   getUser(accessToken: string): Promise<AuthUserResult>;
   signOut(accessToken: string): Promise<AuthOperationResult>;
@@ -55,6 +57,7 @@ type AuthClient = Pick<
   SupabaseClient['auth'],
   | 'signUp'
   | 'signInWithPassword'
+  | 'signInWithIdToken'
   | 'refreshSession'
   | 'getUser'
   | 'resetPasswordForEmail'
@@ -101,6 +104,22 @@ export class SupabaseAuthModel implements AuthModelPort {
         email: input.email,
         password: input.password,
       });
+
+    return {
+      user: data.user,
+      session: data.session,
+      error,
+    };
+  }
+
+  async signInWithGoogle(
+    input: GoogleSignInInput,
+  ): Promise<AuthSessionResult> {
+    const { data, error } = await this.createClient().signInWithIdToken({
+      provider: 'google',
+      token: input.idToken,
+      ...(input.nonce !== undefined && { nonce: input.nonce }),
+    });
 
     return {
       user: data.user,

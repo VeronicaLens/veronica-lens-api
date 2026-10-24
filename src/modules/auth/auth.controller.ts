@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import { AppError } from '../../shared/errors/app-error.js';
 import { parseBody } from '../../shared/http/parse-body.js';
 import {
+  googleSignInSchema,
   refreshSessionSchema,
   signInSchema,
   signUpSchema,
@@ -25,6 +26,15 @@ export class AuthController {
   signIn = async (req: Request, res: Response): Promise<void> => {
     const input = parseBody(signInSchema, req.body);
     const result = await this.service.signIn(input);
+
+    res.status(200).json({
+      data: result,
+    });
+  };
+
+  signInWithGoogle = async (req: Request, res: Response): Promise<void> => {
+    const input = parseBody(googleSignInSchema, req.body);
+    const result = await this.service.signInWithGoogle(input);
 
     res.status(200).json({
       data: result,

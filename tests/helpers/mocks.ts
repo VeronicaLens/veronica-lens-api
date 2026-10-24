@@ -1,3 +1,4 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { vi } from 'vitest';
 
 import type { AccountModelPort } from '../../src/modules/account/account.model.js';
@@ -5,10 +6,31 @@ import type { AuthModelPort } from '../../src/modules/auth/auth.model.js';
 import type { AvatarStoragePort } from '../../src/modules/profile/avatar.storage.js';
 import type { ProfileModelPort } from '../../src/modules/profile/profile.model.js';
 
+// Supabase Auth SDK methods used by SupabaseAuthModel.
+export function createAuthClientMock() {
+  return {
+    signUp: vi.fn<SupabaseClient['auth']['signUp']>(),
+    signInWithPassword:
+      vi.fn<SupabaseClient['auth']['signInWithPassword']>(),
+    signInWithIdToken:
+      vi.fn<SupabaseClient['auth']['signInWithIdToken']>(),
+    refreshSession: vi.fn<SupabaseClient['auth']['refreshSession']>(),
+    getUser: vi.fn<SupabaseClient['auth']['getUser']>(),
+    resetPasswordForEmail:
+      vi.fn<SupabaseClient['auth']['resetPasswordForEmail']>(),
+    setSession: vi.fn<SupabaseClient['auth']['setSession']>(),
+    updateUser: vi.fn<SupabaseClient['auth']['updateUser']>(),
+    admin: {
+      signOut: vi.fn<SupabaseClient['auth']['admin']['signOut']>(),
+    },
+  };
+}
+
 export function createAuthModelMock() {
   return {
     signUp: vi.fn<AuthModelPort['signUp']>(),
     signIn: vi.fn<AuthModelPort['signIn']>(),
+    signInWithGoogle: vi.fn<AuthModelPort['signInWithGoogle']>(),
     refresh: vi.fn<AuthModelPort['refresh']>(),
     getUser: vi.fn<AuthModelPort['getUser']>(),
     signOut: vi.fn<AuthModelPort['signOut']>(),

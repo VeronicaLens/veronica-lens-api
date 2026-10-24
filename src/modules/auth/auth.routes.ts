@@ -15,6 +15,7 @@ export function createAuthRouter(model: AuthModelPort): Router {
 
   router.post('/sign-up', limiter, controller.signUp);
   router.post('/sign-in', limiter, controller.signIn);
+  router.post('/google', limiter, controller.signInWithGoogle);
   router.post('/refresh', limiter, controller.refresh);
   router.post('/sign-out', authenticate, controller.signOut);
   router.post('/password/recovery',limiter,controller.requestPasswordRecovery);

@@ -27,6 +27,19 @@ export const signInSchema = z.object({
 export type SignUpInput = z.infer<typeof signUpSchema>;
 export type SignInInput = z.infer<typeof signInSchema>;
 
+// Compact JWS: three base64url segments. Signature checks happen in Supabase.
+const idTokenSchema = z
+  .string()
+  .max(8192)
+  .regex(/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/);
+
+export const googleSignInSchema = z.object({
+  idToken: idTokenSchema,
+  nonce: z.string().min(1).max(256).optional(),
+});
+
+export type GoogleSignInInput = z.infer<typeof googleSignInSchema>;
+
 export const refreshSessionSchema = z.object({
   refreshToken: refreshTokenSchema,
 });

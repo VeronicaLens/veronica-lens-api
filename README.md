@@ -4,10 +4,11 @@ API do Veronica Lens em Express 5 e TypeScript, com autenticacao via Supabase,
 logs estruturados e documentacao HTTP interativa.
 
 O projeto esta sendo reconstruido incrementalmente. Atualmente implementa
-cadastro, login, renovacao de sessao, consulta do usuario autenticado, logout
-da sessao atual, solicitacao de recuperacao de senha por email, atualizacao
-da senha com a sessao do proprio usuario, consulta/edicao do proprio perfil,
-upload/remocao de avatar e exclusao da propria conta.
+cadastro, login por senha e com Google, renovacao de sessao, consulta do
+usuario autenticado, logout da sessao atual, solicitacao de recuperacao de
+senha por email, atualizacao da senha com a sessao do proprio usuario,
+consulta/edicao do proprio perfil, upload/remocao de avatar e exclusao da
+propria conta.
 Os demais dominios (catalogo, eventos, observacoes etc.) ainda nao estao
 implementados.
 
@@ -174,6 +175,33 @@ expirar; o aplicativo deve remover os tokens locais ao sair.
 Se a revogacao remota falhar, a API retorna erro. Apagar os tokens locais
 nao comprova que a sessao foi revogada no provedor.
 
+### Login com Google
+
+`POST /api/v1/auth/google` recebe `{ "idToken": "...", "nonce": "..." }`. O app
+obtem o ID token pelo Google Sign-In no aparelho; a API o troca por uma sessao
+do Supabase com `signInWithIdToken` e devolve a mesma sessao publica do login
+por senha. No primeiro acesso, o Supabase cria a conta.
+
+- A assinatura, o emissor, a audiencia e a validade do token sao verificados
+  pelo Supabase; a API so valida o formato antes de enviar.
+- `nonce` e opcional. Se o token foi solicitado com nonce, envie o valor
+  original; o Supabase compara com o hash presente no token. Usar nonce
+  protege contra reuso de um ID token capturado.
+- Token invalido, expirado, de outro app ou com nonce divergente retorna
+  `401 AUTH_GOOGLE_TOKEN_INVALID`. Provedor desabilitado no Supabase retorna
+  `503` e e registrado em log.
+- A rota compartilha o limite de tentativas de autenticacao.
+
+Configuracao necessaria no painel do Supabase, em
+**Authentication -> Sign In / Providers -> Google**: habilitar o provedor e
+cadastrar em **Client IDs** os IDs OAuth do Google usados pelo app (Web e
+Android). Sem isso, todo login com Google falha.
+
+O nome publico usa `display_name` dos metadados e, para contas Google,
+`full_name` ou `name`. A trigger do banco que cria `profiles` ainda le apenas
+`display_name`; ate uma migration no `veronica-lens-database` ajustar isso,
+perfis criados pelo Google comecam com `displayName` nulo.
+
 ### Recuperacao de senha
 
 A solicitacao retorna HTTP 202 com mensagem generica, sem confirmar se existe
@@ -320,7 +348,7 @@ Nunca registre tokens, senhas, chaves ou o contexto autenticado completo.
 
 ## Limite de tentativas
 
-Cadastro, login, refresh, recuperacao e atualizacao de senha compartilham
+Cadastro, login (senha e Google), refresh, recuperacao e atualizacao de senha compartilham
 20 requisicoes por IP a cada 15 minutos,
 contando sucessos e falhas. O bloqueio retorna HTTP 429 e `Retry-After`.
 A consulta do usuario autenticado nao usa esse limitador.

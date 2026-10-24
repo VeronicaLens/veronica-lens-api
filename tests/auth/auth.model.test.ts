@@ -1,27 +1,11 @@
-import {
-  AuthApiError,
-  type SupabaseClient,
-} from '@supabase/supabase-js';
+import { AuthApiError } from '@supabase/supabase-js';
 import { describe, expect, it, vi } from 'vitest';
 
 import { SupabaseAuthModel } from '../../src/modules/auth/auth.model.js';
+import { createAuthClientMock } from '../helpers/mocks.js';
 
 function setup() {
-  const client = {
-    signUp: vi.fn<SupabaseClient['auth']['signUp']>(),
-    signInWithPassword:
-      vi.fn<SupabaseClient['auth']['signInWithPassword']>(),
-    refreshSession: vi.fn<SupabaseClient['auth']['refreshSession']>(),
-    getUser: vi.fn<SupabaseClient['auth']['getUser']>(),
-    resetPasswordForEmail:
-      vi.fn<SupabaseClient['auth']['resetPasswordForEmail']>(),
-    setSession: vi.fn<SupabaseClient['auth']['setSession']>(),
-    updateUser: vi.fn<SupabaseClient['auth']['updateUser']>(),
-    admin: {
-      signOut:
-        vi.fn<SupabaseClient['auth']['admin']['signOut']>(),
-    },
-  };
+  const client = createAuthClientMock();
 
   const createClient = vi.fn(() => client);
   const model = new SupabaseAuthModel(

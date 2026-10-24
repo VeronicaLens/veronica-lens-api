@@ -8,6 +8,7 @@ import { AppError } from '../../shared/errors/app-error.js';
 import { logger } from '../../shared/logging/logger.js';
 import type { AuthModelPort } from './auth.model.js';
 import type {
+  GoogleSignInInput,
   RefreshSessionInput,
   UpdatePasswordInput,
   SignInInput,
@@ -40,15 +41,21 @@ function toPublicUser(user: User): PublicUser {
     return invalidProviderResponse();
   }
 
-  const displayName: unknown = user.user_metadata?.display_name;
+  const metadata: Record<string, unknown> = user.user_metadata ?? {};
+  // Email sign-up stores display_name; Google stores full_name or name.
+  const displayName = [
+    metadata.display_name,
+    metadata.full_name,
+    metadata.name,
+  ].find(
+    (value): value is string =>
+      typeof value === 'string' && value.trim().length > 0,
+  );
 
   return {
     id: user.id,
     email: user.email,
-    displayName:
-      typeof displayName === 'string' && displayName.trim().length > 0
-        ? displayName.trim()
-        : null,
+    displayName: displayName?.trim().slice(0, 100) ?? null,
   };
 }
 
@@ -190,6 +197,37 @@ function throwPasswordUpdateError(error: AuthError): never {
   return throwAuthError(error);
 }
 
+function throwGoogleSignInError(error: AuthError): never {
+  if (
+    error.status === 429 ||
+    error.name === 'AuthRetryableFetchError' ||
+    (error.status !== undefined && error.status >= 500)
+  ) {
+    return throwAuthError(error);
+  }
+
+  if (error.code === 'provider_disabled') {
+    logger.error('Google sign-in is disabled in Supabase Auth');
+
+    throw new AppError(
+      503,
+      'AUTH_UNAVAILABLE',
+      'Authentication service is temporarily unavailable',
+    );
+  }
+
+  if (error.code === 'email_not_confirmed') {
+    return throwAuthError(error);
+  }
+
+  // Invalid, expired or foreign tokens and nonce mismatches.
+  throw new AppError(
+    401,
+    'AUTH_GOOGLE_TOKEN_INVALID',
+    'Google credential is invalid or expired',
+  );
+}
+
 export class AuthService {
   constructor(private readonly model: AuthModelPort) {}
 
@@ -225,6 +263,20 @@ export class AuthService {
 
     if (result.error) {
       throwAuthError(result.error);
+    }
+
+    if (!result.session) {
+      return invalidProviderResponse();
+    }
+
+    return toPublicSession(result.session);
+  }
+
+  async signInWithGoogle(input: GoogleSignInInput): Promise<PublicSession> {
+    const result = await this.model.signInWithGoogle(input);
+
+    if (result.error) {
+      throwGoogleSignInError(result.error);
     }
 
     if (!result.session) {

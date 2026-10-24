@@ -1,6 +1,5 @@
 import {
   AuthApiError,
-  type SupabaseClient,
   type User,
 } from '@supabase/supabase-js';
 import request from 'supertest';
@@ -8,7 +7,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { createApp } from '../../src/app.js';
 import { SupabaseAuthModel } from '../../src/modules/auth/auth.model.js';
-import { createAppMocks, createAuthModelMock } from '../helpers/mocks.js';
+import { createAppMocks, createAuthClientMock, createAuthModelMock } from '../helpers/mocks.js';
 
 function createUser(): User {
   return {
@@ -37,22 +36,7 @@ function setup() {
 
 describe('Session sign-out', () => {
   it('uses the explicit token and local scope in the SDK', async () => {
-    const client = {
-      signUp: vi.fn<SupabaseClient['auth']['signUp']>(),
-      signInWithPassword:
-        vi.fn<SupabaseClient['auth']['signInWithPassword']>(),
-      refreshSession:
-        vi.fn<SupabaseClient['auth']['refreshSession']>(),
-      getUser: vi.fn<SupabaseClient['auth']['getUser']>(),
-      resetPasswordForEmail:
-        vi.fn<SupabaseClient['auth']['resetPasswordForEmail']>(),
-      setSession: vi.fn<SupabaseClient['auth']['setSession']>(),
-      updateUser: vi.fn<SupabaseClient['auth']['updateUser']>(),
-      admin: {
-        signOut:
-          vi.fn<SupabaseClient['auth']['admin']['signOut']>(),
-      },
-    };
+    const client = createAuthClientMock();
 
     client.admin.signOut.mockResolvedValue({
       data: null,

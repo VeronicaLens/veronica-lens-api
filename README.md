@@ -536,6 +536,30 @@ descontinuado: esses horarios sao calculados na hora, sem persistencia, em
 colunas e a tabela `astronomical_event_sync_runs` criadas para o job continuam
 no banco ate uma migration de limpeza no `veronica-lens-database`.
 
+## Observacoes
+
+Todas as rotas exigem bearer token e usam o JWT do usuario, so enxergando as
+proprias observacoes pela RLS.
+
+- `GET /api/v1/observations?page=1&pageSize=20` lista as observacoes do mais
+  novo para o mais antigo (`pageSize` de 1 a 50). Cada foto traz uma URL
+  assinada de 1 hora. `hasMore` indica se ha outra pagina.
+- `PUT /api/v1/observations/{observationId}/photos/{photoId}` recebe os bytes
+  da foto no corpo, com `Content-Type` JPEG, PNG, WebP, HEIC ou HEIF (ate 50 MB).
+  Os metadados de captura vao no header `x-veronica-observation`, como JSON
+  codificado em URL, para o corpo continuar binario. A API confere a assinatura
+  do arquivo contra o tipo declarado. Cria ou substitui a observacao e a foto.
+- `DELETE /api/v1/observations/{observationId}/photos/{photoId}` remove o
+  arquivo primeiro. Se nao sobrar foto, a observacao tambem e apagada e a
+  resposta traz `observationDeleted: true`.
+- `DELETE /api/v1/observations/{observationId}` remove a observacao e todas as
+  fotos, com 204.
+
+Erros de banco ou de Storage nunca expõem detalhes internos. Falha de banco
+retorna `503 OBSERVATION_UNAVAILABLE`; falha de Storage, `503
+OBSERVATION_STORAGE_UNAVAILABLE`, exceto tamanho (413), tipo (415) e token (401),
+que seguem o status do Storage.
+
 ## Exclusao de conta
 
 `DELETE /api/v1/account` exige bearer token e o corpo

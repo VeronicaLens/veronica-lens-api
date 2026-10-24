@@ -81,6 +81,7 @@ export const openApiDocument = {
     { name: 'Conditions' },
     { name: 'Planning' },
     { name: 'Events' },
+    { name: 'Observations' },
   ],
 
   paths: {
@@ -625,6 +626,167 @@ export const openApiDocument = {
           '404': errorResponse('Event not found or not published'),
           '500': errorResponse('Unexpected server error'),
           '503': errorResponse('Events or authentication service unavailable'),
+        },
+      },
+    },
+
+    '/api/v1/observations': {
+      get: {
+        tags: ['Observations'],
+        operationId: 'listObservations',
+        summary: 'List the authenticated user’s observations',
+        description:
+          'Newest first. Each observation includes signed URLs for its photos, valid for one hour. `hasMore` is true when another page exists.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'page', in: 'query', schema: { type: 'integer', minimum: 1, default: 1 } },
+          {
+            name: 'pageSize',
+            in: 'query',
+            schema: { type: 'integer', minimum: 1, maximum: 50, default: 20 },
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Observation page',
+            content: jsonContent({
+              type: 'object',
+              required: ['data'],
+              properties: {
+                data: {
+                  type: 'object',
+                  required: ['observations', 'page', 'pageSize', 'hasMore'],
+                  properties: {
+                    observations: { type: 'array', items: { type: 'object' } },
+                    page: { type: 'integer' },
+                    pageSize: { type: 'integer' },
+                    hasMore: { type: 'boolean' },
+                  },
+                },
+              },
+            }),
+          },
+          '400': errorResponse('Invalid page or pageSize'),
+          '401': errorResponse('Missing, invalid or expired token'),
+          '500': errorResponse('Unexpected server error'),
+          '503': errorResponse('Observations or authentication service unavailable'),
+        },
+      },
+    },
+
+    '/api/v1/observations/{observationId}': {
+      delete: {
+        tags: ['Observations'],
+        operationId: 'deleteObservation',
+        summary: 'Delete an observation and all of its photos',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'observationId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+        ],
+        responses: {
+          '204': { description: 'Observation deleted; no response body' },
+          '400': errorResponse('Invalid observation id'),
+          '401': errorResponse('Missing, invalid or expired token'),
+          '404': errorResponse('Observation not found'),
+          '500': errorResponse('Unexpected server error'),
+          '503': errorResponse('Observation storage or database unavailable'),
+        },
+      },
+    },
+
+    '/api/v1/observations/{observationId}/photos/{photoId}': {
+      put: {
+        tags: ['Observations'],
+        operationId: 'saveObservationPhoto',
+        summary: 'Create or replace a photo of an observation',
+        description:
+          'Send the raw image bytes with the matching Content-Type (JPEG, PNG, WebP, HEIC or HEIF, up to 50 MB). The bytes are checked against the declared type. The capture metadata travels in the `x-veronica-observation` header as URL-encoded JSON, so the body stays binary.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'observationId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+          { name: 'photoId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+          {
+            name: 'x-veronica-observation',
+            in: 'header',
+            required: true,
+            description:
+              'URL-encoded JSON with title, notes, capturedAt, optional astronomicalEventId, celestialObjectName, latitude, longitude, device and parameters.',
+            schema: { type: 'string' },
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: Object.fromEntries(
+            ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'].map((type) => [
+              type,
+              { schema: { type: 'string', format: 'binary' } },
+            ]),
+          ),
+        },
+        responses: {
+          '200': {
+            description: 'Saved photo',
+            content: jsonContent({
+              type: 'object',
+              required: ['data'],
+              properties: {
+                data: {
+                  type: 'object',
+                  required: ['photo'],
+                  properties: {
+                    photo: {
+                      type: 'object',
+                      properties: {
+                        observationId: { type: 'string', format: 'uuid' },
+                        photoId: { type: 'string', format: 'uuid' },
+                        storagePath: { type: 'string' },
+                        capturedAt: { type: 'string', format: 'date-time' },
+                      },
+                    },
+                  },
+                },
+              },
+            }),
+          },
+          '400': errorResponse('Empty file, content does not match the type, or invalid metadata header'),
+          '401': errorResponse('Missing, invalid or expired token'),
+          '413': errorResponse('Photo exceeds 50 MB'),
+          '415': errorResponse('Unsupported image type'),
+          '500': errorResponse('Unexpected server error'),
+          '503': errorResponse('Observation storage or database unavailable'),
+        },
+      },
+      delete: {
+        tags: ['Observations'],
+        operationId: 'deleteObservationPhoto',
+        summary: 'Delete one photo of an observation',
+        description:
+          'Removes the file first. If the observation has no photos left, the observation is deleted too, and `observationDeleted` is true.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'observationId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+          { name: 'photoId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+        ],
+        responses: {
+          '200': {
+            description: 'Photo deleted',
+            content: jsonContent({
+              type: 'object',
+              required: ['data'],
+              properties: {
+                data: {
+                  type: 'object',
+                  required: ['observationDeleted'],
+                  properties: { observationDeleted: { type: 'boolean' } },
+                },
+              },
+            }),
+          },
+          '400': errorResponse('Invalid observation or photo id'),
+          '401': errorResponse('Missing, invalid or expired token'),
+          '404': errorResponse('Photo not found'),
+          '500': errorResponse('Unexpected server error'),
+          '503': errorResponse('Observation storage or database unavailable'),
         },
       },
     },

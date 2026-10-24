@@ -11,6 +11,8 @@ import { createCatalogRouter } from './modules/catalog/catalog.routes.js';
 import { createConditionsRouter } from './modules/conditions/conditions.routes.js';
 import type { EventsModelPort } from './modules/events/events.model.js';
 import { createEventsRouter } from './modules/events/events.routes.js';
+import type { ObservationsModelPort } from './modules/observations/observations.model.js';
+import { createObservationsRouter } from './modules/observations/observations.routes.js';
 import type { ProfileModelPort } from './modules/profile/profile.model.js';
 import { createPlanningRouter } from './modules/planning/planning.routes.js';
 import type { AvatarStoragePort } from './modules/profile/avatar.storage.js';
@@ -36,6 +38,7 @@ interface AppOptions {
   ephemerisProvider: EphemerisProviderPort;
   weatherProvider: WeatherProviderPort;
   eventsModel: EventsModelPort;
+  observationsModel: ObservationsModelPort;
   corsOrigins?: readonly string[];
   httpsOnly?: boolean;
 }
@@ -101,6 +104,10 @@ export function createApp(options: AppOptions) {
   app.use(
     '/api/v1/events',
     createEventsRouter(options.eventsModel, authenticate),
+  );
+  app.use(
+    '/api/v1/observations',
+    createObservationsRouter(options.observationsModel, authenticate),
   );
   app.use(createDocsRouter());
 

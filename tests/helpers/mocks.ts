@@ -4,6 +4,7 @@ import { vi } from 'vitest';
 import type { AccountModelPort } from '../../src/modules/account/account.model.js';
 import type { EphemerisProviderPort } from '../../src/modules/astronomy/index.js';
 import type { EventsModelPort } from '../../src/modules/events/events.model.js';
+import type { ObservationsModelPort } from '../../src/modules/observations/observations.model.js';
 import type { WeatherProviderPort } from '../../src/modules/weather/index.js';
 import type { AuthModelPort } from '../../src/modules/auth/auth.model.js';
 import { StaticCatalogModel } from '../../src/modules/catalog/catalog.model.js';
@@ -90,6 +91,15 @@ export function createEventsModelMock() {
   } satisfies EventsModelPort;
 }
 
+export function createObservationsModelMock() {
+  return {
+    list: vi.fn<ObservationsModelPort['list']>(),
+    savePhoto: vi.fn<ObservationsModelPort['savePhoto']>(),
+    deletePhoto: vi.fn<ObservationsModelPort['deletePhoto']>(),
+    deleteObservation: vi.fn<ObservationsModelPort['deleteObservation']>(),
+  } satisfies ObservationsModelPort;
+}
+
 // Every dependency required by createApp; override only what a test uses.
 export function createAppMocks() {
   return {
@@ -102,5 +112,6 @@ export function createAppMocks() {
     ephemerisProvider: createEphemerisProviderMock(),
     weatherProvider: createWeatherProviderMock(),
     eventsModel: createEventsModelMock(),
+    observationsModel: createObservationsModelMock(),
   };
 }

@@ -26,6 +26,21 @@ export interface AuthOperationResult {
   error: AuthError | null;
 }
 
+export interface UpdatePasswordModelInput {
+  userId: string;
+  accessToken: string;
+  refreshToken: string;
+  password: string;
+}
+
+export type PasswordUpdateResult =
+  | { status: 'updated'; user: User }
+  | { status: 'failed'; error: AuthError }
+  | { status: 'session-unusable' };
+
+// updateUser renews sessions close to expiry, rotating tokens on the server.
+const MIN_SESSION_VALIDITY_MS = 2 * 60 * 1000;
+
 export interface AuthModelPort {
   signUp(input: SignUpInput): Promise<AuthSessionResult>;
   signIn(input: SignInInput): Promise<AuthSessionResult>;
@@ -33,6 +48,7 @@ export interface AuthModelPort {
   getUser(accessToken: string): Promise<AuthUserResult>;
   signOut(accessToken: string): Promise<AuthOperationResult>;
   requestPasswordRecovery(email: string): Promise<AuthOperationResult>;
+  updatePassword(input: UpdatePasswordModelInput,): Promise<PasswordUpdateResult>;
 }
 
 type AuthClient = Pick<
@@ -42,6 +58,8 @@ type AuthClient = Pick<
   | 'refreshSession'
   | 'getUser'
   | 'resetPasswordForEmail'
+  | 'setSession'
+  | 'updateUser'
 > & {
   admin: Pick<SupabaseClient['auth']['admin'], 'signOut'>;
 };
@@ -135,5 +153,41 @@ export class SupabaseAuthModel implements AuthModelPort {
     );
 
     return { error };
+  }
+
+  async updatePassword(
+    input: UpdatePasswordModelInput,
+  ): Promise<PasswordUpdateResult> {
+    const client = this.createClient();
+
+    const { data, error } = await client.setSession({
+      access_token: input.accessToken,
+      refresh_token: input.refreshToken,
+    });
+
+    if (error) {
+      return { status: 'failed', error };
+    }
+
+    const expiresAt = data.session?.expires_at;
+
+    if (
+      data.user?.id !== input.userId ||
+      data.session?.access_token !== input.accessToken ||
+      expiresAt === undefined ||
+      expiresAt * 1000 - Date.now() < MIN_SESSION_VALIDITY_MS
+    ) {
+      return { status: 'session-unusable' };
+    }
+
+    const result = await client.updateUser({
+      password: input.password,
+    });
+
+    if (result.error) {
+      return { status: 'failed', error: result.error };
+    }
+
+    return { status: 'updated', user: result.data.user };
   }
 }

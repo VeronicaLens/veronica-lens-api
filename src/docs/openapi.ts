@@ -203,6 +203,31 @@ export const openApiDocument = {
         },
       },
     },
+
+    '/api/v1/auth/password': {
+      put: {
+        tags: ['Authentication'],
+        operationId: 'updatePassword',
+        summary: 'Update the password of the authenticated user',
+        description:
+          'Uses the session of the authenticated user; send the refresh token of the same session. Sessions expiring within 2 minutes are refused with AUTH_SESSION_REFRESH_REQUIRED: refresh the session and retry. Supabase password rules and reauthentication settings apply.',
+        security: [{ bearerAuth: [] }],
+        requestBody: requestBody('UpdatePasswordInput'),
+        responses: {
+          '200': dataResponse('Password updated', 'CurrentUserResult'),
+          '400': errorResponse('Invalid input or rejected password'),
+          '401': errorResponse(
+            'Missing, invalid or expiring session; refresh may be required',
+          ),
+          '403': errorResponse('Recent reauthentication required'),
+          '413': errorResponse('Request body exceeds 1 MB'),
+          '429': commonAuthErrors['429'],
+          '500': errorResponse('Unexpected server error'),
+          '502': errorResponse('Invalid or unexpected provider response'),
+          '503': errorResponse('Authentication provider unavailable'),
+        },
+      },
+    },
   },
 
   components: {
@@ -297,6 +322,24 @@ export const openApiDocument = {
         type: 'object',
         required: ['refreshToken'],
         properties: {
+          refreshToken: {
+            type: 'string',
+            minLength: 1,
+            pattern: '\\S',
+          },
+        },
+      },
+
+      UpdatePasswordInput: {
+        type: 'object',
+        required: ['password', 'refreshToken'],
+        properties: {
+          password: {
+            type: 'string',
+            format: 'password',
+            minLength: 8,
+            maxLength: 72,
+          },
           refreshToken: {
             type: 'string',
             minLength: 1,

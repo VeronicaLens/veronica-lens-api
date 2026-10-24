@@ -13,6 +13,7 @@ function setup() {
     signOut: vi.fn<AuthModelPort['signOut']>(),
     requestPasswordRecovery:
       vi.fn<AuthModelPort['requestPasswordRecovery']>(),
+    updatePassword: vi.fn<AuthModelPort['updatePassword']>(),
   };
 
   return {
@@ -34,6 +35,7 @@ describe('API documentation', () => {
 
     expect(Object.keys(response.body.paths).sort()).toEqual([
       '/api/v1/auth/me',
+      '/api/v1/auth/password',
       '/api/v1/auth/password/recovery',
       '/api/v1/auth/refresh',
       '/api/v1/auth/sign-in',
@@ -100,6 +102,28 @@ describe('API documentation', () => {
     expect(Object.keys(operation.responses).sort()).toEqual([
       '202', '400', '413', '429', '500', '502', '503',
     ]);
+  });
+
+  it('documents the protected password update', async () => {
+    const { app, model } = setup();
+
+    const response = await request(app)
+      .get('/openapi.json')
+      .expect(200);
+
+    const operation = response.body.paths['/api/v1/auth/password'].put;
+
+    expect(operation.security).toEqual([{ bearerAuth: [] }]);
+    expect(
+      operation.requestBody.content['application/json'].schema,
+    ).toEqual({ $ref: '#/components/schemas/UpdatePasswordInput' });
+    expect(
+      response.body.components.schemas.UpdatePasswordInput.required,
+    ).toEqual(['password', 'refreshToken']);
+    expect(Object.keys(operation.responses).sort()).toEqual([
+      '200', '400', '401', '403', '413', '429', '500', '502', '503',
+    ]);
+    expect(model.updatePassword).not.toHaveBeenCalled();
   });
 
   it('serves the Swagger UI page', async () => {

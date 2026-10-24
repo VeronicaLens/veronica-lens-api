@@ -5,6 +5,7 @@ import {
   refreshSessionSchema,
   signInSchema,
   signUpSchema,
+  updatePasswordSchema,
 } from './auth.schemas.js';
 import { passwordRecoverySchema } from './auth.schemas.js';
 import type { AuthService } from './auth.service.js';
@@ -82,6 +83,23 @@ export class AuthController {
         message:
           'If the account exists, password recovery instructions were sent.',
       },
+    });
+  };
+
+  updatePassword = async (req: Request, res: Response): Promise<void> => {
+    if (!req.auth) {
+      throw new AppError(
+        401,
+        'AUTH_REQUIRED',
+        'Authentication is required',
+      );
+    }
+
+    const input = parseBody(updatePasswordSchema, req.body);
+    const user = await this.service.updatePassword(req.auth, input);
+
+    res.status(200).json({
+      data: { user },
     });
   };
 }

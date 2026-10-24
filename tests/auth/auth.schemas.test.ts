@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   signInSchema,
   signUpSchema,
+  updatePasswordSchema,
 } from '../../src/modules/auth/auth.schemas.js';
 
 describe('signUpSchema', () => {
@@ -107,6 +108,38 @@ describe('signInSchema', () => {
           email: 'user@example.com',
           password,
         }).success,
+      ).toBe(false);
+    },
+  );
+});
+
+describe('updatePasswordSchema', () => {
+  const validInput = {
+    password: '  new password  ',
+    refreshToken: 'test-refresh-token',
+  };
+
+  it('preserves password and token exactly and strips unknown fields', () => {
+    expect(
+      updatePasswordSchema.parse({ ...validInput, userId: 'other-user' }),
+    ).toEqual(validInput);
+  });
+
+  it.each(['1234567', 'x'.repeat(73)])(
+    'rejects password with invalid length %#',
+    (password) => {
+      expect(
+        updatePasswordSchema.safeParse({ ...validInput, password }).success,
+      ).toBe(false);
+    },
+  );
+
+  it.each([undefined, '', '   '])(
+    'rejects missing or blank refresh token %#',
+    (refreshToken) => {
+      expect(
+        updatePasswordSchema.safeParse({ ...validInput, refreshToken })
+          .success,
       ).toBe(false);
     },
   );

@@ -14,6 +14,7 @@ function setup() {
     signOut: vi.fn<AuthModelPort['signOut']>(),
     requestPasswordRecovery:
       vi.fn<AuthModelPort['requestPasswordRecovery']>(),
+    updatePassword: vi.fn<AuthModelPort['updatePassword']>(),
   };
 
   return {

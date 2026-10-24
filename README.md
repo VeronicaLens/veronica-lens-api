@@ -5,9 +5,10 @@ logs estruturados e documentacao HTTP interativa.
 
 O projeto esta sendo reconstruido incrementalmente. Atualmente implementa
 cadastro, login, renovacao de sessao, consulta do usuario autenticado, logout
-da sessao atual e solicitacao de recuperacao de senha por email.
-O recebimento do link no mobile, a atualizacao da senha e os demais dominios
-ainda nao estao implementados.
+da sessao atual, solicitacao de recuperacao de senha por email e atualizacao
+da senha com a sessao do proprio usuario.
+O recebimento do link no mobile e os demais dominios ainda nao estao
+implementados.
 
 ## Requisitos
 
@@ -169,10 +170,29 @@ e autorize exatamente esse endereco no painel Supabase em
 **Authentication -> URL Configuration -> Redirect URLs**, sem curingas amplos.
 O destino vem da configuracao da API, nunca do corpo da requisicao.
 
-O fluxo completo ainda esta pendente: o mobile precisa registrar o scheme
-`veronicalens` em sua configuracao nativa, receber e validar o retorno e permitir
-a atualizacao da senha. Alterar o scheme exige gerar uma nova development build.
+O fluxo completo ainda esta pendente no mobile: o app precisa registrar o scheme
+`veronicalens` em sua configuracao nativa, receber o retorno do link e chamar
+a atualizacao de senha. Alterar o scheme exige gerar uma nova development build.
 Os testes locais usam mocks e nao verificam entrega de email nem abertura do app.
+
+### Atualizacao de senha
+
+`PUT /api/v1/auth/password` exige o access token no header `Authorization`
+e recebe a nova senha e o refresh token da mesma sessao. A API cria um cliente
+Supabase exclusivo da requisicao, estabelece a sessao do usuario e chama
+`updateUser`; a chave administrativa nao e usada. As regras do Supabase,
+como a recusa da mesma senha e a exigencia de reautenticacao recente quando
+habilitada, continuam valendo.
+
+O SDK renovaria automaticamente sessoes perto de expirar, rotacionando os
+tokens no servidor sem que o app recebesse os novos. Por isso a API recusa,
+com `AUTH_SESSION_REFRESH_REQUIRED`, sessoes com menos de 2 minutos de
+validade ou que nao correspondam ao usuario autenticado. Nesse caso, o app deve
+renovar a sessao e repetir a operacao.
+
+A resposta retorna somente o usuario publico. Confira no painel Supabase se
+outras sessoes sao encerradas apos a troca; a API nao revoga sessoes por conta
+propria nesta etapa.
 
 ## Erros e logs
 
@@ -200,7 +220,8 @@ Nunca registre tokens, senhas, chaves ou o contexto autenticado completo.
 
 ## Limite de tentativas
 
-Cadastro, login, refresh e recuperacao de senha compartilham 20 requisicoes por IP a cada 15 minutos,
+Cadastro, login, refresh, recuperacao e atualizacao de senha compartilham
+20 requisicoes por IP a cada 15 minutos,
 contando sucessos e falhas. O bloqueio retorna HTTP 429 e `Retry-After`.
 A consulta do usuario autenticado nao usa esse limitador.
 

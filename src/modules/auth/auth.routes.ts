@@ -18,6 +18,7 @@ export function createAuthRouter(model: AuthModelPort): Router {
   router.post('/refresh', limiter, controller.refresh);
   router.post('/sign-out', authenticate, controller.signOut);
   router.post('/password/recovery',limiter,controller.requestPasswordRecovery);
+  router.put('/password',limiter,authenticate,controller.updatePassword);
 
   router.get('/me', authenticate, controller.me);
 

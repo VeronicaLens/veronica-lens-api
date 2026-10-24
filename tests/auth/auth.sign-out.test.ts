@@ -32,6 +32,7 @@ function setup() {
     signOut: vi.fn<AuthModelPort['signOut']>(),
     requestPasswordRecovery:
       vi.fn<AuthModelPort['requestPasswordRecovery']>(),
+    updatePassword: vi.fn<AuthModelPort['updatePassword']>(),
   };
 
   model.getUser.mockResolvedValue({
@@ -56,6 +57,8 @@ describe('Session sign-out', () => {
       getUser: vi.fn<SupabaseClient['auth']['getUser']>(),
       resetPasswordForEmail:
         vi.fn<SupabaseClient['auth']['resetPasswordForEmail']>(),
+      setSession: vi.fn<SupabaseClient['auth']['setSession']>(),
+      updateUser: vi.fn<SupabaseClient['auth']['updateUser']>(),
       admin: {
         signOut:
           vi.fn<SupabaseClient['auth']['admin']['signOut']>(),

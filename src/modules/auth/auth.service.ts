@@ -9,6 +9,7 @@ import { logger } from '../../shared/logging/logger.js';
 import type { AuthModelPort } from './auth.model.js';
 import type {
   RefreshSessionInput,
+  UpdatePasswordInput,
   SignInInput,
   SignUpInput,
 } from './auth.schemas.js';
@@ -17,6 +18,7 @@ import type {
   PublicUser,
   SignUpResult,
 } from './auth.types.js';
+import type { AuthContext } from '../../shared/auth/auth-context.js';
 
 function invalidProviderResponse(): never {
   logger.error('Authentication provider returned invalid data');
@@ -154,6 +156,40 @@ function throwAuthError(error: AuthError): never {
   }
 }
 
+function throwPasswordUpdateError(error: AuthError): never {
+  switch (error.code) {
+    case 'same_password':
+    case 'weak_password':
+      throw new AppError(
+        400,
+        'AUTH_PASSWORD_REJECTED',
+        'The new password was rejected',
+      );
+
+    case 'reauthentication_needed':
+    case 'reauthentication_not_valid':
+      throw new AppError(
+        403,
+        'AUTH_REAUTHENTICATION_REQUIRED',
+        'Recent authentication is required to change the password',
+      );
+  }
+
+  if (
+    error.status === 401 ||
+    error.status === 403 ||
+    error.code === 'bad_jwt'
+  ) {
+    throw new AppError(
+      401,
+      'AUTH_TOKEN_INVALID',
+      'Authentication token is invalid or expired',
+    );
+  }
+
+  return throwAuthError(error);
+}
+
 export class AuthService {
   constructor(private readonly model: AuthModelPort) {}
 
@@ -282,5 +318,37 @@ export class AuthService {
 
       throwAuthError(result.error);
     }
+  }
+
+  async updatePassword(
+    auth: AuthContext,
+    input: UpdatePasswordInput,
+  ): Promise<PublicUser> {
+    const result = await this.model.updatePassword({
+      userId: auth.user.id,
+      accessToken: auth.accessToken,
+      refreshToken: input.refreshToken,
+      password: input.password,
+    });
+
+    if (result.status === 'session-unusable') {
+      throw new AppError(
+        401,
+        'AUTH_SESSION_REFRESH_REQUIRED',
+        'Refresh the session and try again',
+      );
+    }
+
+    if (result.status === 'failed') {
+      throwPasswordUpdateError(result.error);
+    }
+
+    const user = toPublicUser(result.user);
+
+    if (user.id !== auth.user.id) {
+      return invalidProviderResponse();
+    }
+
+    return user;
   }
 }

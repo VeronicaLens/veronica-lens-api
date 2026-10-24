@@ -120,6 +120,7 @@ src/
     auth/                # Schemas, rotas, controller, service e model
     catalog/             # Catalogo estatico de objetos celestes
     conditions/          # Avaliacao das condicoes de observacao
+    planning/            # Recomendacao da melhor janela de observacao
     profile/             # Perfil do usuario autenticado
     sky-guide/           # Posicoes dos objetos do catalogo para o observador
     weather/             # Previsao horaria via Open-Meteo, com cache
@@ -136,6 +137,7 @@ tests/
   auth/                  # Testes do modulo de autenticacao
   catalog/               # Testes do catalogo e da integridade dos dados
   conditions/            # Avaliacao, service e rotas de condicoes
+  planning/              # Recomendacao de janelas de observacao
   profile/               # Testes do modulo de perfil
   sky-guide/             # Testes do guia do ceu
   weather/               # Cliente do Open-Meteo e cache
@@ -314,7 +316,7 @@ os dados em memoria.
 ## Astronomia e JPL Horizons
 
 O modulo `astronomy` calcula posicoes no ceu e nao tem rotas proprias; e usado
-pelo guia do ceu e sera usado por eventos e planejamento.
+pelo guia do ceu e pelo planejamento, e sera usado pelos eventos.
 
 - **Estrelas e constelacoes** (coordenadas fixas J2000): conversao local de
   equatorial para horizontal (`astro-core.ts`), sem chamada externa. Sem
@@ -383,8 +385,8 @@ a localizacao nos proprios logs.
 
 O modulo `weather` obtem previsao horaria do
 [Open-Meteo](https://open-meteo.com/), servico publico que nao exige chave.
-Nao tem rotas proprias; e usado pelas condicoes de observacao e sera usado
-pelo planejamento.
+Nao tem rotas proprias; e usado pelas condicoes de observacao e pelo
+planejamento.
 
 Cada hora traz temperatura, umidade relativa, probabilidade e volume de
 precipitacao, cobertura de nuvens, visibilidade e vento, sempre em UTC e em
@@ -450,6 +452,42 @@ Horizons nos testes), sem chamada externa. Falhas do Open-Meteo retornam
 Mudancas em relacao a API antiga: o fator `darkness` (antes, meio-dia de ceu
 limpo era avaliado como bom), os textos em portugues gerados pela API
 (`skyLabel`, `summary`) foram removidos e a localizacao saiu da query string.
+
+## Planejamento de observacao
+
+`POST /api/v1/planning/recommendation` exige bearer token e encontra a melhor
+janela para observar um objeto do catalogo:
+
+```json
+{
+  "objectId": "crux",
+  "observer": { "latitudeDegrees": -22.9, "longitudeDegrees": -47.06 },
+  "windowFrom": "2026-06-01T19:00:00-03:00",
+  "windowTo": "2026-06-02T05:00:00-03:00",
+  "minimumAltitudeDegrees": 20
+}
+```
+
+- A janela dura ate 24 horas, comeca no maximo 1 hora antes de agora e termina
+  em ate um ano. `minimumAltitudeDegrees` vai de 0 a 80 (padrao 20).
+- A janela e amostrada a cada 15 minutos. Uma amostra e favoravel quando o
+  objeto esta na altitude minima ou acima e a avaliacao das condicoes (a mesma
+  de `/conditions`, incluindo escuridao) nao e `poor`.
+- A recomendacao e o trecho favoravel continuo mais longo (o mais cedo em caso
+  de empate), com o horario e a altitude do pico.
+- Sem janela, `rejections` conta as amostras abaixo da altitude minima e com
+  condicoes ruins; o app pode explicar o motivo no idioma do usuario.
+- `samples` traz todas as amostras, para o app desenhar a curva de altitude.
+
+Estrelas e constelacoes sao calculadas localmente. Para Lua e planetas, a API
+faz apenas duas consultas ao Horizons (inicio e fim da janela) e interpola
+ascensao reta e declinacao entre elas; o erro fica abaixo de 1 grau para a Lua
+(0,2 grau na verificacao contra o Horizons) e e desprezivel para planetas. Se
+o Horizons falhar, a rota retorna `503 PLANNING_UNAVAILABLE`.
+
+Se o clima nao estiver disponivel, por exemplo em janelas alem dos 16 dias de
+previsao, a recomendacao continua considerando apenas a escuridao, com
+`weatherAvailable: false` e `rating: null` nas amostras.
 
 ## Exclusao de conta
 

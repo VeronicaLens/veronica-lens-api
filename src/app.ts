@@ -10,6 +10,7 @@ import type { CatalogModelPort } from './modules/catalog/catalog.model.js';
 import { createCatalogRouter } from './modules/catalog/catalog.routes.js';
 import { createConditionsRouter } from './modules/conditions/conditions.routes.js';
 import type { ProfileModelPort } from './modules/profile/profile.model.js';
+import { createPlanningRouter } from './modules/planning/planning.routes.js';
 import type { AvatarStoragePort } from './modules/profile/avatar.storage.js';
 import { createProfileRouter } from './modules/profile/profile.routes.js';
 import { createSkyGuideRouter } from './modules/sky-guide/sky-guide.routes.js';
@@ -84,6 +85,15 @@ export function createApp(options: AppOptions) {
   app.use(
     '/api/v1/conditions',
     createConditionsRouter(options.weatherProvider, authenticate),
+  );
+  app.use(
+    '/api/v1/planning',
+    createPlanningRouter(
+      options.catalogModel,
+      options.ephemerisProvider,
+      options.weatherProvider,
+      authenticate,
+    ),
   );
   app.use(createDocsRouter());
 

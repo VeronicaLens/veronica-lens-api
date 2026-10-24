@@ -79,6 +79,7 @@ export const openApiDocument = {
     { name: 'Catalog' },
     { name: 'Sky guide' },
     { name: 'Conditions' },
+    { name: 'Planning' },
   ],
 
   paths: {
@@ -496,6 +497,27 @@ export const openApiDocument = {
         responses: {
           '200': dataResponse('Hourly conditions', 'ConditionsForecastResult'),
           ...conditionsErrors,
+        },
+      },
+    },
+
+    '/api/v1/planning/recommendation': {
+      post: {
+        tags: ['Planning'],
+        operationId: 'recommendObservationWindow',
+        summary: 'Find the best window to observe one object',
+        description:
+          'Samples the window every 15 minutes. A sample is favorable when the object is at or above `minimumAltitudeDegrees` and the conditions are not poor (darkness only when no weather forecast covers it). The recommended window is the longest favorable stretch. Windows last up to 24 hours, start at most one hour ago and end within one year.',
+        security: [{ bearerAuth: [] }],
+        requestBody: requestBody('RecommendationInput'),
+        responses: {
+          '200': dataResponse('Recommendation and samples', 'RecommendationResult'),
+          '400': errorResponse('Invalid input or window out of range'),
+          '401': errorResponse('Missing, invalid or expired token'),
+          '404': errorResponse('Celestial object not found'),
+          '413': errorResponse('Request body exceeds 1 MB'),
+          '500': errorResponse('Unexpected server error'),
+          '503': errorResponse('Object positions or authentication service unavailable'),
         },
       },
     },
@@ -941,6 +963,89 @@ export const openApiDocument = {
           from: { type: 'string', format: 'date-time' },
           to: { type: 'string', format: 'date-time' },
           hours: { type: 'array', items: ref('HourlyConditions') },
+        },
+      },
+
+      RecommendationInput: {
+        type: 'object',
+        required: ['objectId', 'observer', 'windowFrom', 'windowTo'],
+        additionalProperties: false,
+        properties: {
+          objectId: { type: 'string', pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$' },
+          observer: ref('Observer'),
+          windowFrom: { type: 'string', format: 'date-time' },
+          windowTo: {
+            type: 'string',
+            format: 'date-time',
+            description: 'After windowFrom and at most 24 hours later.',
+          },
+          minimumAltitudeDegrees: {
+            type: 'number',
+            minimum: 0,
+            maximum: 80,
+            default: 20,
+          },
+        },
+      },
+
+      RecommendationResult: {
+        type: 'object',
+        required: [
+          'objectId',
+          'objectName',
+          'status',
+          'window',
+          'weatherAvailable',
+          'minimumAltitudeDegrees',
+          'sampleIntervalMinutes',
+          'rejections',
+          'samples',
+        ],
+        properties: {
+          objectId: { type: 'string' },
+          objectName: { type: 'string' },
+          status: { type: 'string', enum: ['recommended', 'no_favorable_window'] },
+          window: {
+            type: 'object',
+            nullable: true,
+            required: ['from', 'to', 'peakAt', 'peakAltitudeDegrees'],
+            properties: {
+              from: { type: 'string', format: 'date-time' },
+              to: { type: 'string', format: 'date-time' },
+              peakAt: { type: 'string', format: 'date-time' },
+              peakAltitudeDegrees: { type: 'number' },
+            },
+          },
+          weatherAvailable: { type: 'boolean' },
+          minimumAltitudeDegrees: { type: 'number' },
+          sampleIntervalMinutes: { type: 'integer' },
+          rejections: {
+            type: 'object',
+            description: 'Samples failing each criterion; one sample may fail both.',
+            required: ['belowMinimumAltitude', 'poorConditions'],
+            properties: {
+              belowMinimumAltitude: { type: 'integer', minimum: 0 },
+              poorConditions: { type: 'integer', minimum: 0 },
+            },
+          },
+          samples: {
+            type: 'array',
+            items: {
+              type: 'object',
+              required: ['at', 'altitudeDegrees', 'sunAltitudeDegrees', 'rating', 'favorable'],
+              properties: {
+                at: { type: 'string', format: 'date-time' },
+                altitudeDegrees: { type: 'number' },
+                sunAltitudeDegrees: { type: 'number' },
+                rating: {
+                  type: 'string',
+                  enum: ['good', 'fair', 'poor'],
+                  nullable: true,
+                },
+                favorable: { type: 'boolean' },
+              },
+            },
+          },
         },
       },
 

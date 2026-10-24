@@ -121,6 +121,7 @@ src/
     catalog/             # Catalogo estatico de objetos celestes
     profile/             # Perfil do usuario autenticado
     sky-guide/           # Posicoes dos objetos do catalogo para o observador
+    weather/             # Previsao horaria via Open-Meteo, com cache
   shared/
     auth/                # Middleware, contexto autenticado e requireAuth
     errors/              # Erros da aplicacao
@@ -135,6 +136,7 @@ tests/
   catalog/               # Testes do catalogo e da integridade dos dados
   profile/               # Testes do modulo de perfil
   sky-guide/             # Testes do guia do ceu
+  weather/               # Cliente do Open-Meteo e cache
 ```
 
 Ao adicionar um metodo a um `ModelPort`, atualize o mock correspondente em
@@ -374,6 +376,41 @@ Falhas parciais nao derrubam a requisicao: IDs desconhecidos aparecem em
 A rota usa `POST` para que a localizacao do usuario fique no corpo, fora de
 URLs e de logs de acesso de proxies e da hospedagem. A API tambem nao registra
 a localizacao nos proprios logs.
+
+## Clima (Open-Meteo)
+
+O modulo `weather` obtem previsao horaria do
+[Open-Meteo](https://open-meteo.com/), servico publico que nao exige chave.
+Ainda nao tem rotas proprias; sera usado pelas condicoes de observacao e pelo
+planejamento.
+
+Cada hora traz temperatura, umidade relativa, probabilidade e volume de
+precipitacao, cobertura de nuvens, visibilidade e vento, sempre em UTC e em
+unidades metricas. Valores ausentes no modelo chegam como `null`, sem invalidar
+a previsao. `gridLocation` informa o ponto da grade do modelo, que pode diferir
+da coordenada pedida.
+
+Protecoes do `OpenMeteoClient`, no mesmo padrao do Horizons:
+
+- Timeout de 8 s; ate 3 tentativas para 429 e 5xx, com espera crescente.
+- No maximo 4 requisicoes simultaneas por processo.
+- Datas fora do alcance da previsao (cerca de 92 dias atras a 16 dias a frente)
+  retornam HTTP 400 no Open-Meteo e viram `REJECTED`, sem nova tentativa.
+- Falhas viram `WeatherProviderError` (`UNAVAILABLE`, `INVALID_RESPONSE` ou
+  `REJECTED`); o conteudo da resposta externa nao e repassado.
+
+`CachedWeatherProvider` arredonda as coordenadas para 0,01 grau (cerca de 1 km;
+a grade do modelo e maior) e consulta dias UTC inteiros, guardando o resultado
+por 30 minutos (ate 500 entradas). Assim, janelas diferentes do mesmo dia e
+usuarios proximos reaproveitam uma unica consulta; cada chamador recebe apenas
+as horas pedidas. Pedidos identicos simultaneos sao unificados e falhas nao
+sao guardadas.
+
+`tests/fixtures/open-meteo-forecast.json` e uma resposta real (Campinas,
+2026-10-24) usada pelos testes, que nao acessam a rede.
+
+O limitador de concorrencia dos dois clientes externos fica em
+`src/shared/http/semaphore.ts`.
 
 ## Exclusao de conta
 

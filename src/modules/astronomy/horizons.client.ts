@@ -1,3 +1,4 @@
+import { Semaphore } from '../../shared/http/semaphore.js';
 import {
   AstronomyProviderError,
   type ApparentPosition,
@@ -21,29 +22,6 @@ const PROVIDER_OBJECT_ID = /^\d{1,9}$/;
 
 const defaultSleep = (ms: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, ms));
-
-// Limits in-flight requests across every caller of the same client instance.
-class Semaphore {
-  private active = 0;
-  private readonly waiting: (() => void)[] = [];
-
-  constructor(private readonly limit: number) {}
-
-  async run<T>(task: () => Promise<T>): Promise<T> {
-    if (this.active >= this.limit) {
-      await new Promise<void>((resolve) => this.waiting.push(resolve));
-    }
-
-    this.active += 1;
-
-    try {
-      return await task();
-    } finally {
-      this.active -= 1;
-      this.waiting.shift()?.();
-    }
-  }
-}
 
 export class HorizonsClient implements EphemerisProviderPort {
   private readonly fetch: typeof fetch;

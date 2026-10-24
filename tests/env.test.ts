@@ -94,4 +94,30 @@ describe('loadEnv', () => {
       }),
     ).toThrow(/PASSWORD_RESET_REDIRECT_URL/);
   });
+
+  it('disables CORS origins by default', () => {
+    expect(loadEnv(validSource()).CORS_ORIGINS).toEqual([]);
+  });
+
+  it('parses a comma-separated list of CORS origins', () => {
+    expect(
+      loadEnv({
+        ...validSource(),
+        CORS_ORIGINS:
+          ' https://admin.example.com , http://localhost:8081 ,',
+      }).CORS_ORIGINS,
+    ).toEqual(['https://admin.example.com', 'http://localhost:8081']);
+  });
+
+  it.each([
+    '*',
+    'admin.example.com',
+    'https://admin.example.com/',
+    'https://admin.example.com/path',
+    'ftp://admin.example.com',
+  ])('rejects invalid CORS origin %s', (origin) => {
+    expect(() =>
+      loadEnv({ ...validSource(), CORS_ORIGINS: origin }),
+    ).toThrow(/CORS_ORIGINS/);
+  });
 });

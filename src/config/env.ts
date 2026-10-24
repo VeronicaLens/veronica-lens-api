@@ -1,6 +1,30 @@
 import 'dotenv/config';
 import { z } from 'zod';
 
+const corsOriginsSchema = z
+  .string()
+  .default('')
+  .transform((value) =>
+    value
+      .split(',')
+      .map((origin) => origin.trim())
+      .filter((origin) => origin.length > 0),
+  )
+  .pipe(
+    z.array(
+      z.url().pipe(
+        z.string().refine((value) => {
+          const url = new URL(value);
+
+          return (
+            ['http:', 'https:'].includes(url.protocol) &&
+            url.origin === value
+          );
+        }, 'Use somente origens HTTP(S), sem caminho ou barra final.'),
+      ),
+    ),
+  );
+
 const envSchema = z.object({
   NODE_ENV: z
     .enum(['development', 'test', 'production'])
@@ -20,6 +44,7 @@ const envSchema = z.object({
   PASSWORD_RESET_REDIRECT_URL: z.literal(
     'veronicalens://auth/reset-password',
   ),
+  CORS_ORIGINS: corsOriginsSchema,
 });
 
 export type Env = z.infer<typeof envSchema>;

@@ -41,6 +41,7 @@ reais antes de iniciar o servidor. Nunca versione o arquivo local ou credenciais
 | `SUPABASE_PUBLISHABLE_KEY` | Sim         | Nenhum        | Chave publica usada pelos clientes de autenticacao e usuario |
 | `SUPABASE_SECRET_KEY`      | Nao         | Nenhum        | Chave exclusiva de futuras operacoes administrativas         |
 | `PASSWORD_RESET_REDIRECT_URL` | Sim      | Nenhum        | Destino autorizado: `veronicalens://auth/reset-password`     |
+| `CORS_ORIGINS`             | Nao         | Vazio         | Origens de navegador permitidas, separadas por virgula       |
 
 A configuracao e validada antes de abrir a porta. Erros indicam os campos
 invalidos sem imprimir seus valores. A criacao do cliente nao verifica
@@ -193,6 +194,27 @@ renovar a sessao e repetir a operacao.
 A resposta retorna somente o usuario publico. Confira no painel Supabase se
 outras sessoes sao encerradas apos a troca; a API nao revoga sessoes por conta
 propria nesta etapa.
+
+## Headers de seguranca e CORS
+
+`helmet` adiciona headers de seguranca a todas as respostas, inclusive erros
+e 404, como `Content-Security-Policy`, `X-Content-Type-Options` e
+`X-Frame-Options`. A CSP padrao funciona com o Swagger UI servido pela API.
+
+Com `NODE_ENV=production`, a API tambem envia HSTS e a diretiva
+`upgrade-insecure-requests`. Fora de producao essas duas protecoes ficam
+desligadas, para permitir abrir `/docs/` por HTTP pelo IP da rede local.
+Em producao, sirva a API somente por HTTPS.
+
+CORS fica fechado por padrao. O app mobile nao depende de CORS, que e uma
+protecao de navegadores, e o Swagger UI usa a mesma origem da API.
+Para liberar um cliente web, informe as origens exatas em `CORS_ORIGINS`,
+por exemplo `https://admin.example.com,http://localhost:8081`.
+Curingas, caminhos e barra final sao rejeitados na inicializacao.
+
+As respostas CORS aceitam somente os headers `Authorization` e `Content-Type`,
+expoem `X-Request-Id`, `Retry-After`, `RateLimit` e `RateLimit-Policy`, e
+nunca permitem cookies entre origens.
 
 ## Erros e logs
 

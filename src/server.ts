@@ -11,7 +11,11 @@ const authModel = new SupabaseAuthModel(
   env.PASSWORD_RESET_REDIRECT_URL,
 );
 
-const app = createApp({ authModel });
+const app = createApp({
+  authModel,
+  corsOrigins: env.CORS_ORIGINS,
+  httpsOnly: env.NODE_ENV === 'production',
+});
 
 const server = app.listen(env.PORT, '0.0.0.0', () => {
   logger.info(

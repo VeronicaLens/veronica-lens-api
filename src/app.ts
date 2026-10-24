@@ -5,10 +5,16 @@ import { createAuthRouter } from './modules/auth/auth.routes.js';
 import { errorHandler } from './shared/http/error-handler.js';
 import { notFoundHandler } from './shared/http/not-found.js';
 import { requestLogger } from './shared/http/request-logger.js';
+import {
+  createCorsMiddleware,
+  createSecurityHeaders,
+} from './shared/http/security.js';
 import { createDocsRouter } from './docs/docs.routes.js';
 
 interface AppOptions {
   authModel: AuthModelPort;
+  corsOrigins?: readonly string[];
+  httpsOnly?: boolean;
 }
 
 export function createApp(options: AppOptions) {
@@ -16,6 +22,8 @@ export function createApp(options: AppOptions) {
 
   app.disable('x-powered-by');
   app.use(requestLogger);
+  app.use(createSecurityHeaders(options.httpsOnly ?? false));
+  app.use(createCorsMiddleware(options.corsOrigins ?? []));
   app.use(express.json({ limit: '1mb' }));
 
   app.get('/health', (_req, res) => {

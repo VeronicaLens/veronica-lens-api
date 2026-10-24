@@ -44,6 +44,7 @@ describe('API documentation', () => {
       '/api/v1/profile',
       '/api/v1/profile/avatar',
       '/api/v1/sky-guide/positions',
+      '/api/v1/sky-guide/rise-set',
       '/health',
     ]);
 

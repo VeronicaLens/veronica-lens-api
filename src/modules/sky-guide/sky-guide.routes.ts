@@ -17,6 +17,7 @@ export function createSkyGuideRouter(
 
   // POST keeps the observer location out of URLs and access logs.
   router.post('/positions', authenticate, controller.positions);
+  router.post('/rise-set', authenticate, controller.riseSet);
 
   return router;
 }

@@ -72,6 +72,8 @@ export function createEphemerisProviderMock() {
   return {
     getApparentPosition:
       vi.fn<EphemerisProviderPort['getApparentPosition']>(),
+    getRiseTransitSet:
+      vi.fn<EphemerisProviderPort['getRiseTransitSet']>(),
   } satisfies EphemerisProviderPort;
 }
 

@@ -34,9 +34,17 @@ function setup(options: { maxEntries?: number } = {}) {
     getApparentPosition: vi.fn<EphemerisProviderPort['getApparentPosition']>(
       async (req) => position(req.observedAt),
     ),
+    getRiseTransitSet: vi.fn<EphemerisProviderPort['getRiseTransitSet']>(
+      async () => [
+        { type: 'rise', at: '2026-06-01T09:30:00.000Z', azimuthDegrees: 70, altitudeDegrees: -0.8 },
+        { type: 'transit', at: '2026-06-01T15:00:00.000Z', azimuthDegrees: 0, altitudeDegrees: 60 },
+        { type: 'set', at: '2026-06-01T21:10:00.000Z', azimuthDegrees: 290, altitudeDegrees: -0.8 },
+      ],
+    ),
   };
   const cache = new CachedEphemerisProvider(inner, {
     ttlMs: 1_000,
+    riseSetTtlMs: 5_000,
     now: () => now,
     ...options,
   });
@@ -151,5 +159,55 @@ describe('CachedEphemerisProvider', () => {
 
     await cache.getApparentPosition(request({ providerObjectId: '1' }));
     expect(inner.getApparentPosition).toHaveBeenCalledTimes(4);
+  });
+});
+
+describe('CachedEphemerisProvider.getRiseTransitSet', () => {
+  const observer = {
+    latitudeDegrees: -22.90012,
+    longitudeDegrees: -47.06044,
+    elevationMeters: 640,
+  };
+
+  it('widens the window to whole hours and returns only the requested events', async () => {
+    const { inner, cache } = setup();
+
+    const events = await cache.getRiseTransitSet({
+      providerObjectId: '301',
+      from: new Date('2026-06-01T09:45:00Z'),
+      to: new Date('2026-06-01T20:30:00Z'),
+      observer,
+    });
+
+    expect(inner.getRiseTransitSet).toHaveBeenCalledExactlyOnceWith({
+      providerObjectId: '301',
+      from: new Date('2026-06-01T09:00:00Z'),
+      to: new Date('2026-06-01T21:00:00Z'),
+      observer: { latitudeDegrees: -22.9, longitudeDegrees: -47.06, elevationMeters: 600 },
+    });
+    expect(events.map((event) => event.type)).toEqual(['transit']);
+  });
+
+  it('reuses one call for windows inside the same hours and expires it', async () => {
+    const { inner, cache, advance } = setup();
+    const base = { providerObjectId: '301', observer };
+
+    await cache.getRiseTransitSet({ ...base, from: new Date('2026-06-01T09:05:00Z'), to: new Date('2026-06-01T20:05:00Z') });
+    await cache.getRiseTransitSet({ ...base, from: new Date('2026-06-01T09:50:00Z'), to: new Date('2026-06-01T20:55:00Z') });
+    expect(inner.getRiseTransitSet).toHaveBeenCalledOnce();
+
+    advance(5_001);
+    await cache.getRiseTransitSet({ ...base, from: new Date('2026-06-01T09:05:00Z'), to: new Date('2026-06-01T20:05:00Z') });
+    expect(inner.getRiseTransitSet).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not cache failures', async () => {
+    const { inner, cache } = setup();
+    const request = { providerObjectId: '301', observer, from: new Date('2026-06-01T09:00:00Z'), to: new Date('2026-06-02T09:00:00Z') };
+
+    inner.getRiseTransitSet.mockRejectedValueOnce(new Error('down'));
+
+    await expect(cache.getRiseTransitSet(request)).rejects.toThrow('down');
+    await expect(cache.getRiseTransitSet(request)).resolves.toHaveLength(3);
   });
 });

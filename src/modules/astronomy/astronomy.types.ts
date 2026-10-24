@@ -27,9 +27,26 @@ export interface EphemerisRequest {
   observer: ObserverLocation;
 }
 
+export type RiseTransitSetType = 'rise' | 'transit' | 'set';
+
+export interface RiseTransitSetEvent {
+  type: RiseTransitSetType;
+  at: string;
+  azimuthDegrees: number;
+  altitudeDegrees: number;
+}
+
+export interface RiseTransitSetRequest {
+  providerObjectId: string;
+  from: Date;
+  to: Date;
+  observer: ObserverLocation;
+}
+
 // Port for moving bodies. Vendor payloads never cross this boundary.
 export interface EphemerisProviderPort {
   getApparentPosition(request: EphemerisRequest): Promise<ApparentPosition>;
+  getRiseTransitSet(request: RiseTransitSetRequest): Promise<RiseTransitSetEvent[]>;
 }
 
 export class AstronomyProviderError extends Error {

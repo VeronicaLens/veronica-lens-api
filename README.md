@@ -318,7 +318,7 @@ os dados em memoria.
 ## Astronomia e JPL Horizons
 
 O modulo `astronomy` calcula posicoes no ceu e nao tem rotas proprias; e usado
-pelo guia do ceu e pelo planejamento, e sera usado pelos eventos.
+pelo guia do ceu (posicoes e nascer/por) e pelo planejamento.
 
 - **Estrelas e constelacoes** (coordenadas fixas J2000): conversao local de
   equatorial para horizontal (`astro-core.ts`), sem chamada externa. Sem
@@ -382,6 +382,29 @@ Falhas parciais nao derrubam a requisicao: IDs desconhecidos aparecem em
 A rota usa `POST` para que a localizacao do usuario fique no corpo, fora de
 URLs e de logs de acesso de proxies e da hospedagem. A API tambem nao registra
 a localizacao nos proprios logs.
+
+### Nascer, passagem e por
+
+`POST /api/v1/sky-guide/rise-set` com `{ objectIds, observer, from? }` calcula,
+para ate 10 objetos, os eventos das 24 horas seguintes a `from` (padrao: agora;
+ate um ano de distancia). Nada e gravado no banco.
+
+- Cada objeto traz `events` em ordem (tipo, horario, azimute e altitude) e
+  `horizon`: `rises-and-sets`, `always-above` (nunca se poe naquela latitude)
+  ou `always-below` (nunca nasce). Como o dia sideral tem 23 h 56 min, uma
+  janela de 24 horas pode ter duas passagens.
+- Estrelas e constelacoes: calculo analitico pelo angulo horario, com o
+  horizonte refratado padrao (-0,567 grau), sem chamada externa.
+- Lua e planetas: uma chamada ao Horizons por objeto (`R_T_S_ONLY`), com
+  resolucao de 1 minuto, refracao e paralaxe da Lua. O cache amplia a janela
+  para horas cheias e guarda o resultado por 6 horas.
+- O Horizons supoe um horizonte ao nivel do mar e inclui a depressao do
+  horizonte pela altitude do observador (cerca de 0,8 grau a 600 m); o calculo
+  local das estrelas nao aplica essa correcao, o que gera diferencas de poucos
+  minutos para observadores em altitude.
+
+IDs desconhecidos e falhas do Horizons aparecem em `unavailable`, como em
+`/positions`.
 
 ## Clima (Open-Meteo)
 
@@ -508,7 +531,8 @@ meteoros, conjuncoes), cadastrados no Supabase.
 
 A API antiga calculava nascer, passagem e por de cada corpo por localizacao,
 gravando o resultado nessa mesma tabela por um job agendado. Esse modelo foi
-descontinuado: esses horarios serao calculados na hora, sem persistencia. As
+descontinuado: esses horarios sao calculados na hora, sem persistencia, em
+`POST /api/v1/sky-guide/rise-set`. As
 colunas e a tabela `astronomical_event_sync_runs` criadas para o job continuam
 no banco ate uma migration de limpeza no `veronica-lens-database`.
 

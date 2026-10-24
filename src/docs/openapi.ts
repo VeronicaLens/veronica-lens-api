@@ -471,6 +471,26 @@ export const openApiDocument = {
       },
     },
 
+    '/api/v1/sky-guide/rise-set': {
+      post: {
+        tags: ['Sky guide'],
+        operationId: 'getRiseTransitSet',
+        summary: 'Rise, transit and set times for the next 24 hours',
+        description:
+          'Window of 24 hours from `from` (default now). Stars and constellations are computed analytically with standard refraction; the Moon and planets come from JPL Horizons at one-minute resolution. `horizon` tells whether the object crosses the horizon or stays above or below it. Unknown ids and provider failures are listed in `unavailable`.',
+        security: [{ bearerAuth: [] }],
+        requestBody: requestBody('RiseSetInput'),
+        responses: {
+          '200': dataResponse('Events per object', 'RiseSetResult'),
+          '400': errorResponse('Invalid input or window out of range'),
+          '401': errorResponse('Missing, invalid or expired token'),
+          '413': errorResponse('Request body exceeds 1 MB'),
+          '500': errorResponse('Unexpected server error'),
+          '503': errorResponse('Authentication provider unavailable'),
+        },
+      },
+    },
+
     '/api/v1/conditions/current': {
       post: {
         tags: ['Conditions'],
@@ -1159,6 +1179,77 @@ export const openApiDocument = {
           startsAt: { type: 'string', format: 'date-time' },
           endsAt: { type: 'string', format: 'date-time', nullable: true },
           peaksAt: { type: 'string', format: 'date-time', nullable: true },
+        },
+      },
+
+      RiseSetInput: {
+        type: 'object',
+        required: ['objectIds', 'observer'],
+        additionalProperties: false,
+        properties: {
+          objectIds: {
+            type: 'array',
+            minItems: 1,
+            maxItems: 10,
+            items: { type: 'string', pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$' },
+          },
+          from: {
+            type: 'string',
+            format: 'date-time',
+            description: 'Start of the 24-hour window, within one year from now. Defaults to now.',
+          },
+          observer: ref('Observer'),
+        },
+      },
+
+      RiseSetResult: {
+        type: 'object',
+        required: ['from', 'to', 'objects', 'unavailable'],
+        properties: {
+          from: { type: 'string', format: 'date-time' },
+          to: { type: 'string', format: 'date-time' },
+          objects: {
+            type: 'array',
+            items: {
+              type: 'object',
+              required: ['id', 'name', 'type', 'horizon', 'events'],
+              properties: {
+                id: { type: 'string' },
+                name: { type: 'string' },
+                type: { type: 'string', enum: ['moon', 'planet', 'star', 'constellation'] },
+                horizon: {
+                  type: 'string',
+                  enum: ['rises-and-sets', 'always-above', 'always-below'],
+                  nullable: true,
+                },
+                events: {
+                  type: 'array',
+                  description: 'Ordered by time; a window may contain two transits.',
+                  items: {
+                    type: 'object',
+                    required: ['type', 'at', 'azimuthDegrees', 'altitudeDegrees'],
+                    properties: {
+                      type: { type: 'string', enum: ['rise', 'transit', 'set'] },
+                      at: { type: 'string', format: 'date-time' },
+                      azimuthDegrees: { type: 'number' },
+                      altitudeDegrees: { type: 'number' },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          unavailable: {
+            type: 'array',
+            items: {
+              type: 'object',
+              required: ['id', 'reason'],
+              properties: {
+                id: { type: 'string' },
+                reason: { type: 'string', enum: ['NOT_FOUND', 'PROVIDER_UNAVAILABLE'] },
+              },
+            },
+          },
         },
       },
 

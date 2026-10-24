@@ -3,24 +3,56 @@ import { logger } from '../../shared/logging/logger.js';
 import {
   AstronomyProviderError,
   equatorialToHorizontal,
+  fixedRiseTransitSet,
   type EphemerisProviderPort,
+  type HorizonStatus,
   type HorizontalCoordinates,
   type ObserverLocation,
+  type RiseTransitSetEvent,
 } from '../astronomy/index.js';
 import type { CatalogModelPort } from '../catalog/catalog.model.js';
 import type { CelestialObject } from '../catalog/catalog.types.js';
-import type { SkyPositionsInput } from './sky-guide.schemas.js';
+import type { RiseSetInput, SkyPositionsInput } from './sky-guide.schemas.js';
 import type {
+  ObjectRiseSet,
+  RiseSetResult,
   SkyObjectPosition,
   SkyPositionsResult,
   UnavailableObject,
 } from './sky-guide.types.js';
 
 const MAX_TIME_OFFSET_MS = 366 * 24 * 60 * 60 * 1_000;
+const RISE_SET_WINDOW_MS = 24 * 60 * 60 * 1_000;
 
-type Outcome =
-  | { kind: 'position'; position: SkyObjectPosition }
+type Outcome<T> =
+  | { kind: 'found'; value: T }
   | { kind: 'unavailable'; entry: UnavailableObject };
+
+function split<T>(outcomes: Outcome<T>[]): {
+  found: T[];
+  unavailable: UnavailableObject[];
+} {
+  return {
+    found: outcomes.flatMap((o) => (o.kind === 'found' ? [o.value] : [])),
+    unavailable: outcomes.flatMap((o) => (o.kind === 'unavailable' ? [o.entry] : [])),
+  };
+}
+
+// Moving bodies: rise or set in the window means it crosses the horizon;
+// otherwise the transit altitude tells on which side it stays.
+function horizonFromEvents(events: RiseTransitSetEvent[]): HorizonStatus | null {
+  if (events.some((event) => event.type !== 'transit')) {
+    return 'rises-and-sets';
+  }
+
+  const transit = events.find((event) => event.type === 'transit');
+
+  if (!transit) {
+    return null;
+  }
+
+  return transit.altitudeDegrees > 0 ? 'always-above' : 'always-below';
+}
 
 export class SkyGuideService {
   constructor(
@@ -32,20 +64,38 @@ export class SkyGuideService {
   async getPositions(input: SkyPositionsInput): Promise<SkyPositionsResult> {
     const observedAt = this.resolveInstant(input.observedAt);
 
-    const outcomes = await Promise.all(
-      input.objectIds.map((id) =>
-        this.locate(id, observedAt, input.observer),
+    const { found, unavailable } = split(
+      await Promise.all(
+        input.objectIds.map((id) =>
+          this.withObject(id, (object) =>
+            this.positionOf(object, observedAt, input.observer),
+          ),
+        ),
+      ),
+    );
+
+    return { observedAt: observedAt.toISOString(), positions: found, unavailable };
+  }
+
+  async getRiseSet(input: RiseSetInput): Promise<RiseSetResult> {
+    const from = this.resolveInstant(input.from);
+    const to = new Date(from.getTime() + RISE_SET_WINDOW_MS);
+
+    const { found, unavailable } = split(
+      await Promise.all(
+        input.objectIds.map((id) =>
+          this.withObject(id, (object) =>
+            this.riseSetOf(object, from, to, input.observer),
+          ),
+        ),
       ),
     );
 
     return {
-      observedAt: observedAt.toISOString(),
-      positions: outcomes.flatMap((outcome) =>
-        outcome.kind === 'position' ? [outcome.position] : [],
-      ),
-      unavailable: outcomes.flatMap((outcome) =>
-        outcome.kind === 'unavailable' ? [outcome.entry] : [],
-      ),
+      from: from.toISOString(),
+      to: to.toISOString(),
+      objects: found,
+      unavailable,
     };
   }
 
@@ -64,11 +114,12 @@ export class SkyGuideService {
     return instant;
   }
 
-  private async locate(
+  // Resolves the catalog object and turns provider failures into
+  // `unavailable` entries, so one object never fails the whole request.
+  private async withObject<T>(
     id: string,
-    observedAt: Date,
-    observer: ObserverLocation,
-  ): Promise<Outcome> {
+    compute: (object: CelestialObject) => Promise<T>,
+  ): Promise<Outcome<T>> {
     const object = await this.catalog.findById(id);
 
     if (!object) {
@@ -76,19 +127,7 @@ export class SkyGuideService {
     }
 
     try {
-      const horizontal = await this.horizontalOf(object, observedAt, observer);
-
-      return {
-        kind: 'position',
-        position: {
-          id: object.id,
-          name: object.name,
-          type: object.type,
-          magnitude: object.magnitude,
-          horizontal,
-          aboveHorizon: horizontal.altitudeDegrees > 0,
-        },
-      };
+      return { kind: 'found', value: await compute(object) };
     } catch (error) {
       if (!(error instanceof AstronomyProviderError)) {
         throw error;
@@ -104,6 +143,48 @@ export class SkyGuideService {
         entry: { id: object.id, reason: 'PROVIDER_UNAVAILABLE' },
       };
     }
+  }
+
+  private async positionOf(
+    object: CelestialObject,
+    observedAt: Date,
+    observer: ObserverLocation,
+  ): Promise<SkyObjectPosition> {
+    const horizontal = await this.horizontalOf(object, observedAt, observer);
+
+    return {
+      id: object.id,
+      name: object.name,
+      type: object.type,
+      magnitude: object.magnitude,
+      horizontal,
+      aboveHorizon: horizontal.altitudeDegrees > 0,
+    };
+  }
+
+  private async riseSetOf(
+    object: CelestialObject,
+    from: Date,
+    to: Date,
+    observer: ObserverLocation,
+  ): Promise<ObjectRiseSet> {
+    const base = { id: object.id, name: object.name, type: object.type };
+    const { coordinates } = object;
+
+    if (coordinates.kind === 'fixed') {
+      const { status, events } = fixedRiseTransitSet(coordinates, from, to, observer);
+
+      return { ...base, horizon: status, events };
+    }
+
+    const events = await this.ephemeris.getRiseTransitSet({
+      providerObjectId: coordinates.providerObjectId,
+      from,
+      to,
+      observer,
+    });
+
+    return { ...base, horizon: horizonFromEvents(events), events };
   }
 
   private async horizontalOf(

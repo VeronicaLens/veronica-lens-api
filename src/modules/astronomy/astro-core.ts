@@ -2,6 +2,8 @@ import type {
   EquatorialCoordinates,
   HorizontalCoordinates,
   ObserverLocation,
+  RiseTransitSetEvent,
+  RiseTransitSetType,
 } from './astronomy.types.js';
 
 const JULIAN_DATE_UNIX_EPOCH = 2_440_587.5;
@@ -111,6 +113,92 @@ export function sunHorizontal(
   observer: ObserverLocation,
 ): HorizontalCoordinates {
   return equatorialToHorizontal(sunEquatorial(date), date, observer);
+}
+
+// Standard horizon for stars: true altitude when refraction lifts the object
+// onto the visible horizon.
+export const STANDARD_HORIZON_DEGREES = -0.5667;
+
+const SIDEREAL_DEGREES_PER_DAY = 360.98564736629;
+
+export type HorizonStatus = 'rises-and-sets' | 'always-above' | 'always-below';
+
+export interface FixedRiseTransitSet {
+  status: HorizonStatus;
+  events: RiseTransitSetEvent[];
+}
+
+// Analytic rise, transit and set for an object with fixed RA/Dec, within
+// [from, to]. Transit is the upper culmination, reported for every status.
+export function fixedRiseTransitSet(
+  equatorial: EquatorialCoordinates,
+  from: Date,
+  to: Date,
+  observer: ObserverLocation,
+  horizonDegrees = STANDARD_HORIZON_DEGREES,
+): FixedRiseTransitSet {
+  const latitude = toRadians(observer.latitudeDegrees);
+  const declination = toRadians(equatorial.declinationDegrees);
+  const denominator = Math.cos(latitude) * Math.cos(declination);
+  const numerator =
+    Math.sin(toRadians(horizonDegrees)) -
+    Math.sin(latitude) * Math.sin(declination);
+  // At the poles every object keeps a constant altitude.
+  const cosHourAngle =
+    Math.abs(denominator) < 1e-12
+      ? numerator > 0 ? 2 : -2
+      : numerator / denominator;
+
+  const status: HorizonStatus =
+    cosHourAngle < -1
+      ? 'always-above'
+      : cosHourAngle > 1
+        ? 'always-below'
+        : 'rises-and-sets';
+
+  const localSiderealTime = normalizeDegrees(
+    greenwichMeanSiderealTimeDegrees(from) + observer.longitudeDegrees,
+  );
+  const dayMs = (360 / SIDEREAL_DEGREES_PER_DAY) * MILLISECONDS_PER_DAY;
+  const firstTransit =
+    from.getTime() +
+    (normalizeDegrees(equatorial.rightAscensionDegrees - localSiderealTime) /
+      SIDEREAL_DEGREES_PER_DAY) *
+      MILLISECONDS_PER_DAY;
+  const halfArcMs =
+    status === 'rises-and-sets'
+      ? (toDegrees(Math.acos(cosHourAngle)) / SIDEREAL_DEGREES_PER_DAY) *
+        MILLISECONDS_PER_DAY
+      : null;
+
+  const candidates: { type: RiseTransitSetType; at: number }[] = [];
+
+  for (const cycle of [-1, 0, 1]) {
+    const transit = firstTransit + cycle * dayMs;
+    candidates.push({ type: 'transit', at: transit });
+
+    if (halfArcMs !== null) {
+      candidates.push({ type: 'rise', at: transit - halfArcMs });
+      candidates.push({ type: 'set', at: transit + halfArcMs });
+    }
+  }
+
+  const events = candidates
+    .filter(({ at }) => at >= from.getTime() && at <= to.getTime())
+    .sort((left, right) => left.at - right.at)
+    .map(({ type, at }) => {
+      const instant = new Date(Math.round(at));
+      const horizontal = equatorialToHorizontal(equatorial, instant, observer);
+
+      return {
+        type,
+        at: instant.toISOString(),
+        azimuthDegrees: horizontal.azimuthDegrees,
+        altitudeDegrees: horizontal.altitudeDegrees,
+      };
+    });
+
+  return { status, events };
 }
 
 function assertValidDate(value: Date): void {

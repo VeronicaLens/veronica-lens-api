@@ -5,6 +5,8 @@ import { createAccountRouter } from './modules/account/account.routes.js';
 import type { EphemerisProviderPort } from './modules/astronomy/index.js';
 import type { AuthModelPort } from './modules/auth/auth.model.js';
 import { createAuthRouter } from './modules/auth/auth.routes.js';
+import { createHealthRouter } from './modules/health/health.routes.js';
+import type { HealthService } from './modules/health/health.service.js';
 import { AuthService } from './modules/auth/auth.service.js';
 import type { CatalogModelPort } from './modules/catalog/catalog.model.js';
 import { createCatalogRouter } from './modules/catalog/catalog.routes.js';
@@ -46,6 +48,7 @@ interface AppOptions {
   observationsModel: ObservationsModelPort;
   notificationsService: NotificationsService;
   notificationsDispatchSecret?: string;
+  healthService: HealthService;
   corsOrigins?: readonly string[];
   httpsOnly?: boolean;
 }
@@ -70,6 +73,7 @@ export function createApp(options: AppOptions) {
     });
   });
 
+  app.use('/api/v1/health', createHealthRouter(options.healthService));
   app.use('/api/v1/auth', createAuthRouter(options.authModel));
   app.use(
     '/api/v1/profile',

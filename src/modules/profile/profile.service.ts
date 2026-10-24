@@ -3,6 +3,7 @@ import type { PostgrestError } from '@supabase/supabase-js';
 import type { AuthContext } from '../../shared/auth/auth-context.js';
 import { AppError } from '../../shared/errors/app-error.js';
 import { logger } from '../../shared/logging/logger.js';
+import { throwIfTokenRejected } from '../../shared/supabase/postgrest-errors.js';
 import { detectImageType, type AvatarFile } from './avatar-image.js';
 import type { AvatarStoragePort, StorageError } from './avatar.storage.js';
 import type {
@@ -14,20 +15,11 @@ import type {
 import type { UpdateProfileInput } from './profile.schemas.js';
 import type { Profile } from './profile.types.js';
 
-// PostgREST JWT errors: missing, invalid or expired token.
-const TOKEN_ERROR_CODES = new Set(['PGRST301', 'PGRST302', 'PGRST303']);
-
 // Postgres check violation and numeric overflow.
 const REJECTED_VALUE_CODES = new Set(['23514', '22003']);
 
 function throwProfileError(error: PostgrestError): never {
-  if (TOKEN_ERROR_CODES.has(error.code)) {
-    throw new AppError(
-      401,
-      'AUTH_TOKEN_INVALID',
-      'Authentication token is invalid or expired',
-    );
-  }
+  throwIfTokenRejected(error);
 
   if (REJECTED_VALUE_CODES.has(error.code)) {
     throw new AppError(

@@ -9,6 +9,8 @@ import { AuthService } from './modules/auth/auth.service.js';
 import type { CatalogModelPort } from './modules/catalog/catalog.model.js';
 import { createCatalogRouter } from './modules/catalog/catalog.routes.js';
 import { createConditionsRouter } from './modules/conditions/conditions.routes.js';
+import type { EventsModelPort } from './modules/events/events.model.js';
+import { createEventsRouter } from './modules/events/events.routes.js';
 import type { ProfileModelPort } from './modules/profile/profile.model.js';
 import { createPlanningRouter } from './modules/planning/planning.routes.js';
 import type { AvatarStoragePort } from './modules/profile/avatar.storage.js';
@@ -33,6 +35,7 @@ interface AppOptions {
   catalogModel: CatalogModelPort;
   ephemerisProvider: EphemerisProviderPort;
   weatherProvider: WeatherProviderPort;
+  eventsModel: EventsModelPort;
   corsOrigins?: readonly string[];
   httpsOnly?: boolean;
 }
@@ -94,6 +97,10 @@ export function createApp(options: AppOptions) {
       options.weatherProvider,
       authenticate,
     ),
+  );
+  app.use(
+    '/api/v1/events',
+    createEventsRouter(options.eventsModel, authenticate),
   );
   app.use(createDocsRouter());
 

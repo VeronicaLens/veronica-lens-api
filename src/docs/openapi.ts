@@ -80,6 +80,7 @@ export const openApiDocument = {
     { name: 'Sky guide' },
     { name: 'Conditions' },
     { name: 'Planning' },
+    { name: 'Events' },
   ],
 
   paths: {
@@ -518,6 +519,92 @@ export const openApiDocument = {
           '413': errorResponse('Request body exceeds 1 MB'),
           '500': errorResponse('Unexpected server error'),
           '503': errorResponse('Object positions or authentication service unavailable'),
+        },
+      },
+    },
+
+    '/api/v1/events': {
+      get: {
+        tags: ['Events'],
+        operationId: 'listEvents',
+        summary: 'List curated astronomical events',
+        description:
+          'Published events curated in the database (eclipses, meteor showers, conjunctions). Returns events overlapping the range, including ongoing ones. `from` defaults to now and `to` to 90 days later; the range spans at most one year.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'from', in: 'query', schema: { type: 'string', format: 'date-time' } },
+          { name: 'to', in: 'query', schema: { type: 'string', format: 'date-time' } },
+          {
+            name: 'type',
+            in: 'query',
+            schema: { type: 'string', pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$', maxLength: 80 },
+          },
+          {
+            name: 'limit',
+            in: 'query',
+            schema: { type: 'integer', minimum: 1, maximum: 100, default: 50 },
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Events ordered by start time',
+            content: jsonContent({
+              type: 'object',
+              required: ['data', 'meta'],
+              properties: {
+                data: {
+                  type: 'object',
+                  required: ['from', 'to', 'events'],
+                  properties: {
+                    from: { type: 'string', format: 'date-time' },
+                    to: { type: 'string', format: 'date-time' },
+                    events: { type: 'array', items: ref('AstronomicalEvent') },
+                  },
+                },
+                meta: {
+                  type: 'object',
+                  required: ['count'],
+                  properties: { count: { type: 'integer', minimum: 0 } },
+                },
+              },
+            }),
+          },
+          '400': errorResponse('Invalid query parameters or range'),
+          '401': errorResponse('Missing, invalid or expired token'),
+          '500': errorResponse('Unexpected server error'),
+          '503': errorResponse('Events or authentication service unavailable'),
+        },
+      },
+    },
+
+    '/api/v1/events/{id}': {
+      get: {
+        tags: ['Events'],
+        operationId: 'getEvent',
+        summary: 'Get a curated astronomical event',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+        ],
+        responses: {
+          '200': {
+            description: 'Event',
+            content: jsonContent({
+              type: 'object',
+              required: ['data'],
+              properties: {
+                data: {
+                  type: 'object',
+                  required: ['event'],
+                  properties: { event: ref('AstronomicalEvent') },
+                },
+              },
+            }),
+          },
+          '401': errorResponse('Missing, invalid or expired token'),
+          '404': errorResponse('Event not found or not published'),
+          '500': errorResponse('Unexpected server error'),
+          '503': errorResponse('Events or authentication service unavailable'),
         },
       },
     },
@@ -1046,6 +1133,32 @@ export const openApiDocument = {
               },
             },
           },
+        },
+      },
+
+      AstronomicalEvent: {
+        type: 'object',
+        required: [
+          'id',
+          'slug',
+          'title',
+          'description',
+          'type',
+          'celestialObjectName',
+          'startsAt',
+          'endsAt',
+          'peaksAt',
+        ],
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          slug: { type: 'string' },
+          title: { type: 'string' },
+          description: { type: 'string' },
+          type: { type: 'string', description: 'Curated category, e.g. eclipse or meteor-shower.' },
+          celestialObjectName: { type: 'string', nullable: true },
+          startsAt: { type: 'string', format: 'date-time' },
+          endsAt: { type: 'string', format: 'date-time', nullable: true },
+          peaksAt: { type: 'string', format: 'date-time', nullable: true },
         },
       },
 

@@ -38,6 +38,8 @@ describe('API documentation', () => {
       '/api/v1/catalog/celestial-objects/{id}',
       '/api/v1/conditions/current',
       '/api/v1/conditions/forecast',
+      '/api/v1/events',
+      '/api/v1/events/{id}',
       '/api/v1/planning/recommendation',
       '/api/v1/profile',
       '/api/v1/profile/avatar',

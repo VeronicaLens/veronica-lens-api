@@ -120,6 +120,7 @@ src/
     auth/                # Schemas, rotas, controller, service e model
     catalog/             # Catalogo estatico de objetos celestes
     conditions/          # Avaliacao das condicoes de observacao
+    events/              # Eventos astronomicos curados (Supabase, RLS)
     planning/            # Recomendacao da melhor janela de observacao
     profile/             # Perfil do usuario autenticado
     sky-guide/           # Posicoes dos objetos do catalogo para o observador
@@ -137,6 +138,7 @@ tests/
   auth/                  # Testes do modulo de autenticacao
   catalog/               # Testes do catalogo e da integridade dos dados
   conditions/            # Avaliacao, service e rotas de condicoes
+  events/                # Eventos curados
   planning/              # Recomendacao de janelas de observacao
   profile/               # Testes do modulo de perfil
   sky-guide/             # Testes do guia do ceu
@@ -488,6 +490,27 @@ o Horizons falhar, a rota retorna `503 PLANNING_UNAVAILABLE`.
 Se o clima nao estiver disponivel, por exemplo em janelas alem dos 16 dias de
 previsao, a recomendacao continua considerando apenas a escuridao, com
 `weatherAvailable: false` e `rating: null` nas amostras.
+
+## Eventos astronomicos
+
+`GET /api/v1/events` e `GET /api/v1/events/{id}` exigem bearer token e leem os
+eventos **curados** da tabela `astronomical_events` (eclipses, chuvas de
+meteoros, conjuncoes), cadastrados no Supabase.
+
+- Parametros: `from` (padrao: agora), `to` (padrao: `from` + 90 dias; intervalo
+  de ate 1 ano), `type` (slug como `meteor-shower`) e `limit` (1 a 100, padrao 50).
+- Retorna eventos que se sobrepoem ao intervalo, inclusive os ja em andamento,
+  ordenados pelo inicio.
+- A consulta usa o JWT do usuario; a RLS libera apenas eventos publicados.
+  A API tambem filtra `provider = 'manual'` e `published = true`, entao linhas
+  gravadas pelo antigo job de sincronizacao por localizacao nunca aparecem.
+- Titulo e descricao sao conteudo cadastrado, no idioma em que foram escritos.
+
+A API antiga calculava nascer, passagem e por de cada corpo por localizacao,
+gravando o resultado nessa mesma tabela por um job agendado. Esse modelo foi
+descontinuado: esses horarios serao calculados na hora, sem persistencia. As
+colunas e a tabela `astronomical_event_sync_runs` criadas para o job continuam
+no banco ate uma migration de limpeza no `veronica-lens-database`.
 
 ## Exclusao de conta
 

@@ -1,0 +1,31 @@
+name: Notifications dispatch
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: notifications-dispatch
+  cancel-in-progress: false
+
+jobs:
+  dispatch:
+    name: Send due event notifications
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Call dispatch endpoint
+        env:
+          API_BASE_URL: ${{ vars.API_BASE_URL }}
+          DISPATCH_SECRET: ${{ secrets.NOTIFICATIONS_DISPATCH_SECRET }}
+        run: |
+          if [ -z "$API_BASE_URL" ] || [ -z "$DISPATCH_SECRET" ]; then
+            echo "API_BASE_URL and NOTIFICATIONS_DISPATCH_SECRET must be configured" >&2
+            exit 1
+          fi
+
+          curl --fail-with-body --silent --show-error --max-time 120 \
+            -X POST "${API_BASE_URL%/}/api/v1/notifications/dispatch" \
+            -H "Authorization: Bearer ${DISPATCH_SECRET}" \
+            -H "Accept: application/json"

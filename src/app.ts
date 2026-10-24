@@ -1,0 +1,137 @@
+import express from 'express';
+
+import type { AccountModelPort } from './modules/account/account.model.js';
+import { createAccountRouter } from './modules/account/account.routes.js';
+import type { EphemerisProviderPort } from './modules/astronomy/index.js';
+import type { AuthModelPort } from './modules/auth/auth.model.js';
+import { createAuthRouter } from './modules/auth/auth.routes.js';
+import { AuthService } from './modules/auth/auth.service.js';
+import type { CatalogModelPort } from './modules/catalog/catalog.model.js';
+import { createCatalogRouter } from './modules/catalog/catalog.routes.js';
+import { createConditionsRouter } from './modules/conditions/conditions.routes.js';
+import type { EventsModelPort } from './modules/events/events.model.js';
+import type { LearningModelPort } from './modules/learning/learning.model.js';
+import { createLearningRouter } from './modules/learning/learning.routes.js';
+import { createEventsRouter } from './modules/events/events.routes.js';
+import type { ObservationsModelPort } from './modules/observations/observations.model.js';
+import { createObservationsRouter } from './modules/observations/observations.routes.js';
+import { createNotificationsRouter } from './modules/notifications/notifications.routes.js';
+import type { NotificationsService } from './modules/notifications/notifications.service.js';
+import type { ProfileModelPort } from './modules/profile/profile.model.js';
+import { createPlanningRouter } from './modules/planning/planning.routes.js';
+import type { AvatarStoragePort } from './modules/profile/avatar.storage.js';
+import { createProfileRouter } from './modules/profile/profile.routes.js';
+import { createSkyGuideRouter } from './modules/sky-guide/sky-guide.routes.js';
+import type { WeatherProviderPort } from './modules/weather/index.js';
+import { createAuthenticateMiddleware } from './shared/auth/authenticate.middleware.js';
+import { errorHandler } from './shared/http/error-handler.js';
+import { notFoundHandler } from './shared/http/not-found.js';
+import { requestLogger } from './shared/http/request-logger.js';
+import {
+  createCorsMiddleware,
+  createSecurityHeaders,
+} from './shared/http/security.js';
+import { createDocsRouter } from './docs/docs.routes.js';
+
+interface AppOptions {
+  authModel: AuthModelPort;
+  profileModel: ProfileModelPort;
+  avatarStorage: AvatarStoragePort;
+  accountModel: AccountModelPort;
+  catalogModel: CatalogModelPort;
+  ephemerisProvider: EphemerisProviderPort;
+  weatherProvider: WeatherProviderPort;
+  eventsModel: EventsModelPort;
+  learningModel: LearningModelPort;
+  observationsModel: ObservationsModelPort;
+  notificationsService: NotificationsService;
+  notificationsDispatchSecret?: string;
+  corsOrigins?: readonly string[];
+  httpsOnly?: boolean;
+}
+
+export function createApp(options: AppOptions) {
+  const app = express();
+  const authenticate = createAuthenticateMiddleware(
+    new AuthService(options.authModel),
+  );
+
+  app.disable('x-powered-by');
+  app.use(requestLogger);
+  app.use(createSecurityHeaders(options.httpsOnly ?? false));
+  app.use(createCorsMiddleware(options.corsOrigins ?? []));
+  app.use(express.json({ limit: '1mb' }));
+
+  app.get('/health', (_req, res) => {
+    res.status(200).json({
+      status: 'ok',
+      uptime: process.uptime(),
+      timestamp: new Date().toISOString(),
+    });
+  });
+
+  app.use('/api/v1/auth', createAuthRouter(options.authModel));
+  app.use(
+    '/api/v1/profile',
+    createProfileRouter(
+      options.profileModel,
+      options.avatarStorage,
+      authenticate,
+    ),
+  );
+  app.use(
+    '/api/v1/account',
+    createAccountRouter(options.accountModel, authenticate),
+  );
+  app.use(
+    '/api/v1/catalog',
+    createCatalogRouter(options.catalogModel, authenticate),
+  );
+  app.use(
+    '/api/v1/sky-guide',
+    createSkyGuideRouter(
+      options.catalogModel,
+      options.ephemerisProvider,
+      authenticate,
+    ),
+  );
+  app.use(
+    '/api/v1/conditions',
+    createConditionsRouter(options.weatherProvider, authenticate),
+  );
+  app.use(
+    '/api/v1/planning',
+    createPlanningRouter(
+      options.catalogModel,
+      options.ephemerisProvider,
+      options.weatherProvider,
+      authenticate,
+    ),
+  );
+  app.use(
+    '/api/v1/events',
+    createEventsRouter(options.eventsModel, authenticate),
+  );
+  app.use(
+    '/api/v1/learning',
+    createLearningRouter(options.learningModel, authenticate),
+  );
+  app.use(
+    '/api/v1/observations',
+    createObservationsRouter(options.observationsModel, authenticate),
+  );
+  app.use(
+    '/api/v1/notifications',
+    createNotificationsRouter(
+      options.notificationsService,
+      authenticate,
+      options.notificationsDispatchSecret,
+    ),
+  );
+  app.use(createDocsRouter());
+
+  app.use(notFoundHandler);
+  app.use(errorHandler);
+
+  return app;
+}

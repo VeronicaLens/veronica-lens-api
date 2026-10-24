@@ -1,0 +1,165 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { vi } from 'vitest';
+
+import type { AccountModelPort } from '../../src/modules/account/account.model.js';
+import type { EphemerisProviderPort } from '../../src/modules/astronomy/index.js';
+import type { EventsModelPort } from '../../src/modules/events/events.model.js';
+import type { LearningModelPort } from '../../src/modules/learning/learning.model.js';
+import type { ObservationsModelPort } from '../../src/modules/observations/observations.model.js';
+import type { DispatchModelPort } from '../../src/modules/notifications/notifications.dispatch-model.js';
+import type { PushSender } from '../../src/modules/notifications/expo-push.client.js';
+import type { DeviceModelPort } from '../../src/modules/notifications/notifications.model.js';
+import { NotificationsService } from '../../src/modules/notifications/notifications.service.js';
+import type { WeatherProviderPort } from '../../src/modules/weather/index.js';
+import type { AuthModelPort } from '../../src/modules/auth/auth.model.js';
+import { StaticCatalogModel } from '../../src/modules/catalog/catalog.model.js';
+import type { AvatarStoragePort } from '../../src/modules/profile/avatar.storage.js';
+import type { ProfileModelPort } from '../../src/modules/profile/profile.model.js';
+
+// Supabase Auth SDK methods used by SupabaseAuthModel.
+export function createAuthClientMock() {
+  return {
+    signUp: vi.fn<SupabaseClient['auth']['signUp']>(),
+    signInWithPassword:
+      vi.fn<SupabaseClient['auth']['signInWithPassword']>(),
+    signInWithIdToken:
+      vi.fn<SupabaseClient['auth']['signInWithIdToken']>(),
+    refreshSession: vi.fn<SupabaseClient['auth']['refreshSession']>(),
+    getUser: vi.fn<SupabaseClient['auth']['getUser']>(),
+    resetPasswordForEmail:
+      vi.fn<SupabaseClient['auth']['resetPasswordForEmail']>(),
+    setSession: vi.fn<SupabaseClient['auth']['setSession']>(),
+    updateUser: vi.fn<SupabaseClient['auth']['updateUser']>(),
+    admin: {
+      signOut: vi.fn<SupabaseClient['auth']['admin']['signOut']>(),
+    },
+  };
+}
+
+export function createAuthModelMock() {
+  return {
+    signUp: vi.fn<AuthModelPort['signUp']>(),
+    signIn: vi.fn<AuthModelPort['signIn']>(),
+    signInWithGoogle: vi.fn<AuthModelPort['signInWithGoogle']>(),
+    refresh: vi.fn<AuthModelPort['refresh']>(),
+    getUser: vi.fn<AuthModelPort['getUser']>(),
+    signOut: vi.fn<AuthModelPort['signOut']>(),
+    requestPasswordRecovery:
+      vi.fn<AuthModelPort['requestPasswordRecovery']>(),
+    updatePassword: vi.fn<AuthModelPort['updatePassword']>(),
+  } satisfies AuthModelPort;
+}
+
+export function createProfileModelMock() {
+  return {
+    findById: vi.fn<ProfileModelPort['findById']>(),
+    update: vi.fn<ProfileModelPort['update']>(),
+  } satisfies ProfileModelPort;
+}
+
+export function createAvatarStorageMock() {
+  return {
+    upload: vi.fn<AvatarStoragePort['upload']>(),
+    remove: vi.fn<AvatarStoragePort['remove']>(),
+  } satisfies AvatarStoragePort;
+}
+
+export function createAccountModelMock() {
+  return {
+    listObservationMediaPaths:
+      vi.fn<AccountModelPort['listObservationMediaPaths']>(),
+    listAvatarPaths: vi.fn<AccountModelPort['listAvatarPaths']>(),
+    removeFiles: vi.fn<AccountModelPort['removeFiles']>(),
+    deleteUser: vi.fn<AccountModelPort['deleteUser']>(),
+  } satisfies AccountModelPort;
+}
+
+export function createEphemerisProviderMock() {
+  return {
+    getApparentPosition:
+      vi.fn<EphemerisProviderPort['getApparentPosition']>(),
+    getRiseTransitSet:
+      vi.fn<EphemerisProviderPort['getRiseTransitSet']>(),
+  } satisfies EphemerisProviderPort;
+}
+
+export function createWeatherProviderMock() {
+  return {
+    getHourlyForecast: vi.fn<WeatherProviderPort['getHourlyForecast']>(),
+  } satisfies WeatherProviderPort;
+}
+
+export function createEventsModelMock() {
+  return {
+    findMany: vi.fn<EventsModelPort['findMany']>(),
+    findById: vi.fn<EventsModelPort['findById']>(),
+  } satisfies EventsModelPort;
+}
+
+export function createLearningModelMock() {
+  return {
+    findTracks: vi.fn<LearningModelPort['findTracks']>(),
+    findTrackBySlug: vi.fn<LearningModelPort['findTrackBySlug']>(),
+    findLessons: vi.fn<LearningModelPort['findLessons']>(),
+    findLessonById: vi.fn<LearningModelPort['findLessonById']>(),
+    findProgress: vi.fn<LearningModelPort['findProgress']>(),
+    findLessonProgress: vi.fn<LearningModelPort['findLessonProgress']>(),
+    upsertProgress: vi.fn<LearningModelPort['upsertProgress']>(),
+  } satisfies LearningModelPort;
+}
+
+export function createObservationsModelMock() {
+  return {
+    list: vi.fn<ObservationsModelPort['list']>(),
+    savePhoto: vi.fn<ObservationsModelPort['savePhoto']>(),
+    deletePhoto: vi.fn<ObservationsModelPort['deletePhoto']>(),
+    deleteObservation: vi.fn<ObservationsModelPort['deleteObservation']>(),
+  } satisfies ObservationsModelPort;
+}
+
+export function createDeviceModelMock() {
+  return {
+    registerDevice: vi.fn<DeviceModelPort['registerDevice']>(),
+    removeDevice: vi.fn<DeviceModelPort['removeDevice']>(),
+  } satisfies DeviceModelPort;
+}
+
+export function createDispatchModelMock() {
+  return {
+    findUpcomingEvents: vi.fn<DispatchModelPort['findUpcomingEvents']>(),
+    findEnabledPreferences: vi.fn<DispatchModelPort['findEnabledPreferences']>(),
+    findActiveTokens: vi.fn<DispatchModelPort['findActiveTokens']>(),
+    insertPendingDeliveries: vi.fn<DispatchModelPort['insertPendingDeliveries']>(),
+    markDeliverySent: vi.fn<DispatchModelPort['markDeliverySent']>(),
+    markDeliveryFailed: vi.fn<DispatchModelPort['markDeliveryFailed']>(),
+    deactivateTokens: vi.fn<DispatchModelPort['deactivateTokens']>(),
+  } satisfies DispatchModelPort;
+}
+
+export function createPushSenderMock() {
+  return {
+    send: vi.fn<PushSender['send']>(),
+  } satisfies PushSender;
+}
+
+// Every dependency required by createApp; override only what a test uses.
+export function createAppMocks() {
+  return {
+    authModel: createAuthModelMock(),
+    profileModel: createProfileModelMock(),
+    avatarStorage: createAvatarStorageMock(),
+    accountModel: createAccountModelMock(),
+    // Static data with no external dependency; the real model is used.
+    catalogModel: new StaticCatalogModel(),
+    ephemerisProvider: createEphemerisProviderMock(),
+    weatherProvider: createWeatherProviderMock(),
+    eventsModel: createEventsModelMock(),
+    learningModel: createLearningModelMock(),
+    observationsModel: createObservationsModelMock(),
+    notificationsService: new NotificationsService(
+      createDeviceModelMock(),
+      createDispatchModelMock(),
+      createPushSenderMock(),
+    ),
+  };
+}

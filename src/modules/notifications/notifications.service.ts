@@ -9,6 +9,7 @@ import type {
   DispatchModelPort,
   EventRow,
   NewDelivery,
+  PreferenceRow,
 } from './notifications.dispatch-model.js';
 import type { DeviceModelPort } from './notifications.model.js';
 import {
@@ -22,6 +23,8 @@ import type { DeviceRegistration, DispatchSummary } from './notifications.types.
 
 // Largest lead time allowed by event_preferences.lead_minutes (30 days).
 const MAX_LEAD_MINUTES = 43_200;
+// Lead time for users who turned notifications on but never customised an event type.
+const DEFAULT_LEAD_MINUTES = 1_440;
 const MINUTE_MS = 60_000;
 
 const PUSH_TITLE = 'Veronica Lens';
@@ -125,13 +128,38 @@ export class NotificationsService {
     if (events.length === 0) return summary;
     summary.events = events.length;
 
-    const preferences = await this.dispatch.findEnabledPreferences(
-      [...new Set(events.map((event) => event.event_type))],
-    );
+    const eventTypes = [...new Set(events.map((event) => event.event_type))];
+    const [preferences, disabled, optedInUserIds] = await Promise.all([
+      this.dispatch.findEnabledPreferences(eventTypes),
+      this.dispatch.findDisabledPreferences(eventTypes),
+      this.dispatch.findOptedInUserIds(),
+    ]);
+    const optedIn = new Set(optedInUserIds);
     const eventsByType = groupBy(events, (event) => event.event_type);
 
+    // The profile switch is the master opt-in: users who never customised an event type
+    // get the default lead time, and an explicit per-type preference only refines it.
+    const explicit = new Set(
+      [...preferences, ...disabled].map(
+        (preference) => `${preference.user_id}:${preference.event_type}`,
+      ),
+    );
+    const effective: PreferenceRow[] = preferences.filter((preference) =>
+      optedIn.has(preference.user_id),
+    );
+    for (const userId of optedIn) {
+      for (const eventType of eventTypes) {
+        if (explicit.has(`${userId}:${eventType}`)) continue;
+        effective.push({
+          user_id: userId,
+          event_type: eventType,
+          lead_minutes: DEFAULT_LEAD_MINUTES,
+        });
+      }
+    }
+
     const recipients = new Map<string, Set<string>>();
-    for (const preference of preferences) {
+    for (const preference of effective) {
       const dueFrom = preference.lead_minutes * MINUTE_MS;
 
       for (const event of eventsByType.get(preference.event_type) ?? []) {

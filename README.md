@@ -612,8 +612,11 @@ exigem bearer token e so alteram os proprios tokens (RLS).
   Sem o segredo configurado, responde `503 DISPATCH_DISABLED`.
 
 Regra de envio: eventos publicados nas proximas 30 dias. Um evento e enviado
-quando `agora >= starts_at - lead_minutes` da preferencia do usuario
-(`event_preferences`). Cada par evento/dispositivo e gravado em
+quando `agora >= starts_at - lead_minutes`. O destinatario precisa ter
+`profiles.notifications_enabled = true` e um dispositivo ativo. Sem preferencia
+salva para o tipo do evento (`event_preferences`), vale a antecedencia padrao de
+24 h; uma preferencia explicita define a antecedencia ou, com `enabled = false`,
+desliga aquele tipo. Cada par evento/dispositivo e gravado em
 `notification_deliveries` antes do envio, o que evita duplicidade em execucoes
 repetidas. Tokens que a Expo marca como `DeviceNotRegistered` sao desativados.
 

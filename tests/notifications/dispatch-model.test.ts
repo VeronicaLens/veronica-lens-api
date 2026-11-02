@@ -188,6 +188,34 @@ describe('SupabaseDispatchModel', () => {
     expect(inCalls.every((call) => call.args[0] === 'event_type')).toBe(true);
   });
 
+  it('finds opted-in users among users with active devices, in batches of 100', async () => {
+    const tokens = Array.from({ length: 250 }, (_, i) => ({
+      id: `token-${i}`,
+      user_id: `user-${i % 150}`,
+    }));
+    const profiles = Array.from({ length: 150 }, (_, i) => ({ id: `user-${i}` }));
+    const { client, calls } = fakeClient({ device_push_tokens: tokens, profiles });
+    const model = new SupabaseDispatchModel(client);
+
+    const ids = await model.findOptedInUserIds();
+
+    const profileFilters = calls.filter((call) => call.method === 'eq' && call.args[0] === 'notifications_enabled');
+    expect(profileFilters).toHaveLength(2);
+    expect(ids).toHaveLength(150);
+  });
+
+  it('reads explicit per-type opt-outs', async () => {
+    const { client, calls } = fakeClient({
+      event_preferences: [{ user_id: 'user-1', event_type: 'meteor' }],
+    });
+    const model = new SupabaseDispatchModel(client);
+
+    const rows = await model.findDisabledPreferences(['meteor']);
+
+    expect(calls.some((call) => call.method === 'eq' && call.args[0] === 'enabled' && call.args[1] === false)).toBe(true);
+    expect(rows).toEqual([{ user_id: 'user-1', event_type: 'meteor' }]);
+  });
+
   it('inserts deliveries in batches of 500 and returns every inserted row', async () => {
     const rows = Array.from({ length: 1200 }, (_, i) => ({
       astronomical_event_id: `event-${i}`,

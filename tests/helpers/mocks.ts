@@ -130,6 +130,8 @@ export function createDispatchModelMock() {
   return {
     findUpcomingEvents: vi.fn<DispatchModelPort['findUpcomingEvents']>(),
     findEnabledPreferences: vi.fn<DispatchModelPort['findEnabledPreferences']>(),
+    findDisabledPreferences: vi.fn<DispatchModelPort['findDisabledPreferences']>().mockResolvedValue([]),
+    findOptedInUserIds: vi.fn<DispatchModelPort['findOptedInUserIds']>().mockResolvedValue([]),
     findActiveTokens: vi.fn<DispatchModelPort['findActiveTokens']>(),
     insertPendingDeliveries: vi.fn<DispatchModelPort['insertPendingDeliveries']>(),
     markDeliverySent: vi.fn<DispatchModelPort['markDeliverySent']>(),

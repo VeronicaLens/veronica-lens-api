@@ -18,6 +18,8 @@ export interface PreferenceRow {
   lead_minutes: number;
 }
 
+export type OptOutRow = Pick<PreferenceRow, 'user_id' | 'event_type'>;
+
 export interface ActiveTokenRow {
   id: string;
   user_id: string;
@@ -40,6 +42,9 @@ export interface NewDelivery {
 export interface DispatchModelPort {
   findUpcomingEvents(from: Date, until: Date): Promise<EventRow[]>;
   findEnabledPreferences(eventTypes: string[]): Promise<PreferenceRow[]>;
+  findDisabledPreferences(eventTypes: string[]): Promise<OptOutRow[]>;
+  /** Users with an active device whose profile has notifications turned on. */
+  findOptedInUserIds(): Promise<string[]>;
   findActiveTokens(userIds: string[]): Promise<ActiveTokenRow[]>;
   insertPendingDeliveries(rows: NewDelivery[]): Promise<DeliveryRow[]>;
   markDeliverySent(id: string, ticketId: string, at: Date): Promise<void>;
@@ -132,6 +137,53 @@ export class SupabaseDispatchModel implements DispatchModelPort {
     }
 
     return rows;
+  }
+
+  async findDisabledPreferences(eventTypes: string[]): Promise<OptOutRow[]> {
+    const rows: OptOutRow[] = [];
+
+    for (const types of chunk(eventTypes, IN_CHUNK_SIZE)) {
+      rows.push(
+        ...(await selectAllPages<OptOutRow>((rangeFrom, rangeTo) =>
+          this.client
+            .from('event_preferences')
+            .select('user_id, event_type')
+            .eq('enabled', false)
+            .in('event_type', types)
+            .order('user_id')
+            .order('event_type')
+            .range(rangeFrom, rangeTo),
+        )),
+      );
+    }
+
+    return rows;
+  }
+
+  async findOptedInUserIds(): Promise<string[]> {
+    const withDevice = await selectAllPages<{ user_id: string }>((rangeFrom, rangeTo) =>
+      this.client
+        .from('device_push_tokens')
+        .select('user_id')
+        .eq('active', true)
+        .order('id')
+        .range(rangeFrom, rangeTo),
+    );
+    const candidates = [...new Set(withDevice.map((row) => row.user_id))];
+    const optedIn: string[] = [];
+
+    for (const ids of chunk(candidates, IN_CHUNK_SIZE)) {
+      const { data, error } = await this.client
+        .from('profiles')
+        .select('id')
+        .eq('notifications_enabled', true)
+        .in('id', ids);
+
+      assertNoError(error);
+      optedIn.push(...((data ?? []) as { id: string }[]).map((row) => row.id));
+    }
+
+    return optedIn;
   }
 
   async findActiveTokens(userIds: string[]): Promise<ActiveTokenRow[]> {

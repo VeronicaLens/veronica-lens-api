@@ -60,6 +60,7 @@ function setup() {
   dispatch.markDeliverySent.mockResolvedValue(undefined);
   dispatch.markDeliveryFailed.mockResolvedValue(undefined);
   dispatch.deactivateTokens.mockResolvedValue(undefined);
+  dispatch.findOptedInUserIds.mockResolvedValue([USER_ID]);
 
   return { devices, dispatch, sender, service };
 }
@@ -300,6 +301,56 @@ describe('NotificationsService.dispatchDueNotifications', () => {
       'Missing push ticket',
       NOW,
     );
+  });
+
+  it('notifies opted-in users without a saved preference using the default lead time', async () => {
+    const { dispatch, sender, service } = setup();
+    dispatch.findUpcomingEvents.mockResolvedValue([eventAt(60 * 20)]);
+    dispatch.findEnabledPreferences.mockResolvedValue([]);
+    dispatch.findActiveTokens.mockResolvedValue([token('token-1')]);
+    sender.send.mockResolvedValue([{ status: 'ok', id: 'ticket-1' }]);
+
+    const summary = await service.dispatchDueNotifications();
+
+    expect(dispatch.findActiveTokens).toHaveBeenCalledWith([USER_ID]);
+    expect(summary).toMatchObject({ recipients: 1, sent: 1 });
+  });
+
+  it('waits for the default lead time before notifying implicit recipients', async () => {
+    const { dispatch, sender, service } = setup();
+    dispatch.findUpcomingEvents.mockResolvedValue([eventAt(60 * 30)]);
+    dispatch.findEnabledPreferences.mockResolvedValue([]);
+
+    const summary = await service.dispatchDueNotifications();
+
+    expect(sender.send).not.toHaveBeenCalled();
+    expect(summary.recipients).toBe(0);
+  });
+
+  it('respects a per-type opt-out even when the profile switch is on', async () => {
+    const { dispatch, sender, service } = setup();
+    dispatch.findUpcomingEvents.mockResolvedValue([eventAt(30)]);
+    dispatch.findEnabledPreferences.mockResolvedValue([]);
+    dispatch.findDisabledPreferences.mockResolvedValue([
+      { user_id: USER_ID, event_type: EVENT_TYPE },
+    ]);
+
+    const summary = await service.dispatchDueNotifications();
+
+    expect(sender.send).not.toHaveBeenCalled();
+    expect(summary.recipients).toBe(0);
+  });
+
+  it('does not notify users who turned notifications off in their profile', async () => {
+    const { dispatch, sender, service } = setup();
+    dispatch.findUpcomingEvents.mockResolvedValue([eventAt(30)]);
+    dispatch.findEnabledPreferences.mockResolvedValue([preference(60)]);
+    dispatch.findOptedInUserIds.mockResolvedValue([]);
+
+    const summary = await service.dispatchDueNotifications();
+
+    expect(sender.send).not.toHaveBeenCalled();
+    expect(summary.recipients).toBe(0);
   });
 
   it('splits sends into chunks of 100 messages', async () => {

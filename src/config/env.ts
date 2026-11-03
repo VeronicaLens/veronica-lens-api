@@ -44,6 +44,17 @@ const envSchema = z.object({
   PASSWORD_RESET_REDIRECT_URL: z.literal(
     'veronicalens://auth/reset-password',
   ),
+  // Without it, Supabase sends confirmation links to the project's Site URL.
+  EMAIL_CONFIRMATION_REDIRECT_URL: z.preprocess(
+    (value) => (value === '' ? undefined : value),
+    z
+      .url()
+      .pipe(z.string().refine(
+        (value) => new URL(value).protocol === 'https:',
+        'Deve usar HTTPS.',
+      ))
+      .optional(),
+  ),
   CORS_ORIGINS: corsOriginsSchema,
   // Optional: when unset, the dispatch endpoint answers 503.
   NOTIFICATIONS_DISPATCH_SECRET: z.preprocess(

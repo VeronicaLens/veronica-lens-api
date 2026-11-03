@@ -115,6 +115,25 @@ describe('loadEnv', () => {
     ).toThrow(/PASSWORD_RESET_REDIRECT_URL/);
   });
 
+  it.each([undefined, ''])(
+    'leaves the email confirmation redirect unset (%j)',
+    (value) => {
+      expect(
+        loadEnv({ ...validSource(), EMAIL_CONFIRMATION_REDIRECT_URL: value })
+          .EMAIL_CONFIRMATION_REDIRECT_URL,
+      ).toBeUndefined();
+    },
+  );
+
+  it.each(['http://localhost:3000', 'veronicalens://confirmed', 'invalid'])(
+    'rejects a non-HTTPS email confirmation redirect %s',
+    (value) => {
+      expect(() =>
+        loadEnv({ ...validSource(), EMAIL_CONFIRMATION_REDIRECT_URL: value }),
+      ).toThrow(/EMAIL_CONFIRMATION_REDIRECT_URL/);
+    },
+  );
+
   it('disables CORS origins by default', () => {
     expect(loadEnv(validSource()).CORS_ORIGINS).toEqual([]);
   });

@@ -72,6 +72,33 @@ describe('SupabaseAuthModel', () => {
     });
   });
 
+  it('sends the configured confirmation redirect on registration', async () => {
+    const client = createAuthClientMock();
+    const model = new SupabaseAuthModel(
+      () => client,
+      'veronicalens://auth/reset-password',
+      'https://veronicalens.example/conta-confirmada/',
+    );
+
+    client.signUp.mockResolvedValue({
+      data: { user: null, session: null },
+      error: null,
+    });
+
+    await model.signUp({
+      email: 'user@example.com',
+      password: 'test-password',
+    });
+
+    expect(client.signUp).toHaveBeenCalledExactlyOnceWith({
+      email: 'user@example.com',
+      password: 'test-password',
+      options: {
+        emailRedirectTo: 'https://veronicalens.example/conta-confirmada/',
+      },
+    });
+  });
+
   it('forwards login credentials and provider errors', async () => {
     const { client, model } = setup();
     const error = new AuthApiError(

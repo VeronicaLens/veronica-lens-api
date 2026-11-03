@@ -45,6 +45,7 @@ reais antes de iniciar o servidor. Nunca versione o arquivo local ou credenciais
 | `SUPABASE_PUBLISHABLE_KEY` | Sim         | Nenhum        | Chave publica usada pelos clientes de autenticacao e usuario |
 | `SUPABASE_SECRET_KEY`      | Sim         | Nenhum        | Chave secreta, usada somente na exclusao de conta            |
 | `PASSWORD_RESET_REDIRECT_URL` | Sim      | Nenhum        | Destino autorizado: `veronicalens://auth/reset-password`     |
+| `EMAIL_CONFIRMATION_REDIRECT_URL` | Nao  | Nenhum        | Pagina HTTPS aberta pelo link de confirmacao do cadastro (ex.: `https://<site>/conta-confirmada/`). Sem ela, o Supabase usa a Site URL do projeto |
 | `CORS_ORIGINS`             | Nao         | Vazio         | Origens de navegador permitidas, separadas por virgula       |
 | `NOTIFICATIONS_DISPATCH_SECRET` | Nao    | Nenhum        | Segredo do job de envio (minimo 32 caracteres). Sem ele, o envio fica desabilitado |
 
@@ -181,6 +182,13 @@ Route -> Controller/Schema -> Service -> Model -> Supabase
 O cadastro pode retornar sessao imediata ou exigir confirmacao de email,
 conforme a configuracao do Supabase. A resposta nao comprova que o email
 estava disponivel antes da solicitacao.
+
+O link de confirmacao leva a `EMAIL_CONFIRMATION_REDIRECT_URL` (pagina
+`/conta-confirmada/` do `veronica-lens-web`). Cadastre a mesma URL no painel
+Supabase em **Authentication -> URL Configuration -> Redirect URLs** e defina
+a **Site URL** como o endereco publico do site; caso contrario, o Supabase
+usa a Site URL padrao (`http://localhost:3000`) e o link abre uma pagina
+inexistente.
 
 A rota protegida valida o access token consultando Supabase Auth; decodificar
 um JWT localmente nao e suficiente para estabelecer a identidade.

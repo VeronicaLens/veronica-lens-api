@@ -71,21 +71,22 @@ export class SupabaseAuthModel implements AuthModelPort {
   constructor(
     private readonly createClient: () => AuthClient,
     private readonly passwordResetRedirectUrl: string,
+    private readonly emailConfirmationRedirectUrl?: string,
   ) {}
 
   async signUp(input: SignUpInput): Promise<AuthSessionResult> {
+    const options = {
+      ...(input.displayName !== undefined && {
+        data: { display_name: input.displayName },
+      }),
+      ...(this.emailConfirmationRedirectUrl !== undefined && {
+        emailRedirectTo: this.emailConfirmationRedirectUrl,
+      }),
+    };
     const credentials = {
       email: input.email,
       password: input.password,
-      ...(input.displayName !== undefined
-        ? {
-            options: {
-              data: {
-                display_name: input.displayName,
-              },
-            },
-          }
-        : {}),
+      ...(Object.keys(options).length > 0 && { options }),
     };
 
     const { data, error } =

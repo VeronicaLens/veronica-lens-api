@@ -34,6 +34,7 @@ const env = loadEnv();
 const authModel = new SupabaseAuthModel(
   () => createAuthClient(env).auth,
   env.PASSWORD_RESET_REDIRECT_URL,
+  env.EMAIL_CONFIRMATION_REDIRECT_URL,
 );
 
 const createClientForUser = (accessToken: string) =>
